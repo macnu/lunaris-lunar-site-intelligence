@@ -90,7 +90,7 @@ def photo_notice(source: str, native_px_m: float, shown_px_m: float, nophoto_pct
                  "La luz, las sombras y el relieve sí son los calculados para este instante."),
                 "No hay ortomosaico LROC válido en esta zona (sombra permanente o fuera de la cobertura).")
     shown = f"{_fmt(shown_px_m, 0)} m/px en pantalla"
-    short = (f"Foto: LROC NAC, NASA/GSFC/ASU, ≈{_fmt(native_px_m, 0)} m/px de origen ({shown}), promedio de pasadas: no es la luz de esta fecha."
+    short = (f"Foto real de la Luna (cámara LROC de la NASA), ≈{_fmt(native_px_m, 0)} m/px de origen ({shown}); mezcla de varias pasadas: no es la luz de esta fecha."
              + (f" {_fmt(nophoto_pct, 0)} % del recorte sin foto." if nophoto_pct >= 1 else "")
              + (" " + PSR_TEXT if in_psr else ""))
     det = ["La foto es un promedio de pasadas con Sol distinto: sus sombras no son las de esta fecha (las del visor sí).",
@@ -98,7 +98,7 @@ def photo_notice(source: str, native_px_m: float, shown_px_m: float, nophoto_pct
     if in_psr:
         det.append(f"El {_fmt(psr_pct, 0)} % de la zona sin foto está dentro de una PSR de Mazarico et al. 2011 (LROC/ASU).")
     if source in ("sdem", "mixed"):
-        det.append("Ortomosaico SDEM (Bertone et al. 2025, 5 m/px): su retícula está desplazada ≈ 2,5 m respecto al relieve.")
+        det.append("Foto del modelo de relieve de 5 m (ortomosaico SDEM, Bertone et al. 2025): su retícula está desplazada ≈ 2,5 m respecto al relieve.")
     if source in ("nac", "mixed"):
         det.append("Mosaico LROC NAC de 1 m/px: puede estar corrido hasta ≈ 15 m respecto al relieve.")
     return short, " ".join(det)

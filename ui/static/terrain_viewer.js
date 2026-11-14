@@ -467,7 +467,7 @@
     setText('az-val', Math.round(obsAz) + '° (N 0°, E 90°)');
     setText('exag-val', '×' + fmt(S.exag, 1));
     var hz = horizonAt(D.sun.az_deg), covered = D.sun.el_deg <= hz;
-    var el = $('sun-state'); el.textContent = D.sun.el_deg < 0 ? 'bajo el horizonte local' : (covered ? 'tapado por el horizonte (a ' + fmt(hz, 1) + '°)' : 'visible');
+    var el = $('sun-state'); el.textContent = D.sun.el_deg < 0 ? 'bajo el horizonte local' : (covered ? 'tapado por el horizonte (a ' + fmt(hz, 1) + '°) en este instante; la ventana de misión puede tenerlo visible otras horas' : 'visible');
     el.className = covered ? 'hid' : '';
     var hz2 = horizonAt(D.earth.az_deg), cov2 = D.earth.el_deg <= hz2;
     var e2 = $('earth-state'); e2.textContent = D.earth.el_deg < 0 ? 'bajo el horizonte local' : (cov2 ? 'tapada por el horizonte (a ' + fmt(hz2, 1) + '°)' : 'visible');

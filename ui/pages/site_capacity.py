@@ -318,7 +318,10 @@ with hero_col:
     if sc is not None:
         rt = C.range_text(sc)
         facts_hero.append(("Nota (score)", f"{C.fmt_num(sc.score, 0)} / 100",
-                           "la incertidumbre apenas mueve la nota" if "(estrecho" in rt else rt.replace("Rango ", "rango ")))
+                           "nota de la MEJOR fecha; el rango no incluye el sesgo de haberla elegido" if "(estrecho" in rt else rt.replace("Rango ", "rango ")))
+        if sc.feasible_start_fraction is not None and (sc.n_starts or 0) > 1:
+            facts_hero.append(("Fechas de inicio que sirven", f"{round(sc.feasible_start_fraction * sc.n_starts)} de {sc.n_starts}",
+                               "con otras fechas el veredicto puede cambiar"))
     facts_hero += C.slope_facts(res)
     if m.link_fraction is not None:
         facts_hero.append(("Hueco máx. sin enlace", C.fmt_duration(m.max_link_gap_s, m.max_link_gap_truncated), ""))
