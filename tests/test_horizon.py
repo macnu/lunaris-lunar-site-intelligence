@@ -340,3 +340,17 @@ def test_site04_far_field_real(site04, simulation_cfg, raw_dir, capsys):
     assert np.abs(r.h_lb_deg - fine.h_lb_deg).max() < 0.02
     assert (r.h_lb_deg >= base.h_lb_deg - 0.2).all()                        # el 80 m no baja el horizonte salvo el sesgo vertical local
     assert dt < 2.0
+
+
+# ------------------------------------------------------------------ campo lejano como única fuente (FAR_FIELD)
+def test_far_field_only_horizon_80m_wall(make_dem_window):
+    """Muro de 400 m a 2 km al norte en un DEM de 80 m: el horizonte es la elevación exacta de la cresta y el modo es FAR_FIELD."""
+    from lsi.terrain.horizon import compute_horizon_far_field
+    far = make_dem_window(crest(2000.0, 400.0), pixel_size_m=80.0, x0_m=-800.0, y0_m=4160.0, shape=(100, 21))
+    r = compute_horizon_far_field(far, obs(mode=HorizonMode.FAR_FIELD), params(r_max_m=3000.0, az_step_deg=5.0))
+    assert r.mode is HorizonMode.FAR_FIELD and r.params.radial_step_m == 40.0   # ½ píxel del DEM de 80 m (queda en los parámetros y en la clave)
+    i = int(np.argmin(r.az_deg))                                               # az 0 (hacia +y)
+    assert r.h_lb_deg[i] == pytest.approx(exact_el_deg(2000.0, 400.0, 2.0), abs=0.5)  # la muestra más cercana a 2 km (paso 40 m)
+    assert r.h_lb_deg[i] > 10.0 and r.h_lb_deg[len(r.az_deg) // 2] < 1.0       # al sur no hay muro
+    assert r.cache_key != compute_horizon(far, obs(), params(r_max_m=3000.0, az_step_deg=5.0)).cache_key   # clave distinta del modo DEM
+    assert compute_horizon_far_field(far, obs(mode=HorizonMode.FAR_FIELD), params(r_max_m=3000.0, az_step_deg=5.0)).h_lb_deg.tolist() == r.h_lb_deg.tolist()

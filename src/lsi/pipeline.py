@@ -64,6 +64,35 @@ SNAP_DEFAULT_PROFILE = "lander_solar_no_rhu"   # perfil del mejor punto cuando l
 _LOCK = threading.Lock()
 _F_EARTH_REF: dict = {}
 
+# Error MEDIDO del horizonte de 80 m frente al de 5 m (docs/validation/horizonte-campo-lejano.md; lo regenera
+# scripts/validate_far_field.py: 120 puntos de Site23, Site11 y Site04, 30 días). Entra en el aviso de la UI: nunca una cifra genérica.
+FAR_FIELD_VALIDATION = {"n_points": 120, "horizon_rms_deg": 0.68, "horizon_max_deg": 5.8, "sun_fraction_abs_p95": 0.040,
+                        "earth_fraction_abs_p95": 0.038, "verdict_change_pct": 10.0}
+FAR_FIELD_LAT_MAX = -80.0   # el DEM polar LOLA 80 m cubre de 80°S al polo (±304 km); más al norte sigue la esfera lisa
+
+
+FAR_FIELD_SCORE_TEXT = ("Terreno fino sin datos: el score es PARCIAL (sin pendiente de aterrizaje: la de 80 m no vale para aterrizar) y "
+                        "la confianza es baja. Sol y Tierra sí usan el horizonte con relieve de 80 m (aproximado). No es comparable con sitios "
+                        "con DEM de 5 m.")
+# textos de site_score que hablan de «esfera lisa» y en el modo de 80 m serían falsos (hay relieve, aunque grueso)
+_FAR_TEXT_FIXES = (
+    ("sin datos de terreno (esfera lisa)", "terreno fino sin datos (el DEM de 80 m no sirve para decidir un aterrizaje)"),
+    ("provisional, cota optimista sobre esfera lisa", "provisional, con terreno fino sin datos"),
+    ("solo refleja el terreno no evaluable (esfera lisa)", "solo refleja el terreno fino no evaluable (80 m)"),
+)
+
+
+def far_field_warning_text() -> str:
+    """Aviso científico del modo de 80 m con el error medido (docs/validation/horizonte-campo-lejano.md)."""
+    v = FAR_FIELD_VALIDATION
+    base = "Resolución 80 m: horizonte aproximado; no sirve para decidir un aterrizaje fino."
+    if v.get("horizon_rms_deg") is None:
+        return base + " Error frente al DEM de 5 m: sin medir."
+    return (f"{base} Medido frente al DEM de 5 m en {v['n_points']} puntos: el horizonte difiere {v['horizon_rms_deg']:.2f}° "
+            f"(RMS) y hasta {v['horizon_max_deg']:.1f}° (máx.); la fracción de Sol cambia ±{100 * v['sun_fraction_abs_p95']:.0f} puntos "
+            f"y la de Tierra ±{100 * v['earth_fraction_abs_p95']:.0f} puntos (percentil 95); el veredicto cambia en el "
+            f"{v['verdict_change_pct']:.0f} % de los puntos.")
+
 
 def effective_step_s(cfg: dict, step_s: float) -> float:
     """Paso de rejilla INTERNO para un paso pedido (M1). Hasta ``timeline.max_step_s`` es el pedido; por encima se divide en
@@ -122,6 +151,17 @@ def far_field_for(raw: Path, x_m: float, y_m: float, r_max_m: float) -> Optional
     """Campo lejano del observador (x, y) tal como lo usa ``run_analysis`` (mismo redondeo → misma clave de caché de horizontes).
     ``scripts/precompute_horizons.py`` lo reutiliza para que su caché acierte (M4)."""
     return _far(str(raw), round(x_m, 3), round(y_m, 3), r_max_m)
+
+
+def _far_ground(raw: Path, lat_deg: float, x_m: float, y_m: float, r_max_m: float) -> Optional[float]:
+    """Elevación del suelo (m) del DEM de 80 m en (x, y); None si el punto está al norte de 80°S, no hay fichero o no hay dato."""
+    if lat_deg > FAR_FIELD_LAT_MAX:
+        return None
+    far = far_field_for(raw, x_m, y_m, r_max_m)
+    if far is None:
+        return None
+    z, ok = sample_bilinear(far, np.array([x_m]), np.array([y_m]))
+    return float(z[0]) if ok[0] else None
 
 
 def _small(ref: DemRef, layer: DemLayer, x_m: float, y_m: float, r_m: float) -> DemWindow:
@@ -338,7 +378,7 @@ def resolve_observer(ctx: AppContext, lat_deg: float, lon_deg_e: float, height_m
                      gazetteer_id: Optional[int] = None, snap_to_dem: Optional[bool] = None,
                      snap_max_km: float = SNAP_MAX_KM, prefer: Optional[str] = None,
                      profile_id: Optional[str] = None, mission_days: Optional[float] = None,
-                     feature_radius_km_: Optional[float] = None
+                     feature_radius_km_: Optional[float] = None, force_far_field: bool = False
                      ) -> tuple[ObserverPoint, tuple[ScientificWarning, ...]]:
     """DEM si hay cobertura (con margen de borde); si no, 'snap_to_dem' (rasgo del buscador o sitio curado cuyo punto
     queda fuera pero hay DEM cerca), ETIQUETADO (``snapped_from``, ``snap_distance_km``, ``snap_kind``, ``snap_reason``,
@@ -360,8 +400,18 @@ def resolve_observer(ctx: AppContext, lat_deg: float, lon_deg_e: float, height_m
         o = ObserverPoint(lat_deg, lon, x, y, height_m, HorizonMode.SMOOTH_SPHERE, site_id=site_id, label=label)
         return o, (_w(WarningCode.NO_DEM_SMOOTH_SPHERE, Severity.WARNING),)
 
-    if force_smooth_sphere or not ctx.dem_refs:
+    def far_or_sphere() -> tuple[ObserverPoint, tuple[ScientificWarning, ...]]:
+        """Dentro del DEM polar de 80 m (lat ≤ 80°S): FAR_FIELD; fuera (o sin el fichero): esfera lisa."""
+        z = _far_ground(_raw(ctx), lat_deg, x, y, ctx.cfg["horizon"]["r_max_m"])
+        if z is None:
+            return sphere()
+        o = ObserverPoint(lat_deg, lon, x, y, height_m, HorizonMode.FAR_FIELD, ground_z_m=z, site_id=site_id, label=label)
+        return o, (_w(WarningCode.FAR_FIELD_80M, Severity.WARNING, "far_field_80m", far_field_warning_text()),)
+
+    if force_smooth_sphere:
         return sphere()
+    if force_far_field or not ctx.dem_refs:
+        return far_or_sphere()
     margin = float(ctx.cfg["observer"].get("edge_margin_px", 2)) * 5.0
     ref = loader.find_dem_for_point(ctx.dem_refs, x, y, margin)
     if ref is not None:
@@ -380,7 +430,7 @@ def resolve_observer(ctx: AppContext, lat_deg: float, lon_deg_e: float, height_m
     if cand is None:
         if loader.find_dem_for_point(ctx.dem_refs, x, y, 0.0) is not None:
             raise ObserverNearEdgeError(f"El punto ({lat_deg:.4f}°, {lon:.4f}°E) está a < {margin:g} m del borde del DEM.")
-        return sphere()
+        return far_or_sphere()
     sref = ctx.dem_refs[cand.dem_key]
     z = _ground(sref, cand.x_m, cand.y_m)
     what = "centro del rasgo" if gazetteer_id is not None else "punto pedido"
@@ -702,7 +752,8 @@ def run_analysis(ctx: AppContext, req: AnalysisRequest) -> AnalysisResult:
         raise InvalidParameterError(f"Perfil de score desconocido '{req.score_profile_id}'; válidos: {sorted(profiles)}")
 
     obs, warns = resolve_observer(ctx, req.lat_deg, req.lon_deg_e, req.observer_height_m, site_id=req.site_id,
-                                  force_smooth_sphere=req.force_smooth_sphere, gazetteer_id=req.gazetteer_id,
+                                  force_smooth_sphere=req.force_smooth_sphere, force_far_field=req.force_far_field,
+                                  gazetteer_id=req.gazetteer_id,
                                   snap_to_dem=req.snap_to_dem, prefer=req.snap_prefer, profile_id=req.score_profile_id,
                                   feature_radius_km_=req.feature_radius_km,
                                   mission_days=req.mission_days if req.mission_days is not None
@@ -716,6 +767,9 @@ def run_analysis(ctx: AppContext, req: AnalysisRequest) -> AnalysisResult:
         window = _layer(ctx.dem_refs[obs.dem_key], DemLayer.SURF)
         far = far_field_for(raw, obs.x_m, obs.y_m, hp.r_max_m)
         horizon = hz_mod.compute_horizon(window, obs, hp, cache_dir=cdir, far=far)
+    elif obs.mode is HorizonMode.FAR_FIELD:   # fuera de los recortes de 5 m: SOLO el 80 m (horizonte aproximado, sin terreno fino)
+        far = far_field_for(raw, obs.x_m, obs.y_m, hp.r_max_m)
+        horizon = hz_mod.compute_horizon_far_field(far, obs, hp, cache_dir=cdir)
     else:
         horizon = hz_mod.smooth_sphere_result(obs, hp)
 
@@ -737,7 +791,7 @@ def run_analysis(ctx: AppContext, req: AnalysisRequest) -> AnalysisResult:
         res.dem_meta = window.meta
 
     # --- incertidumbre
-    if req.with_uncertainty:
+    if req.with_uncertainty and obs.mode is not HorizonMode.FAR_FIELD:   # en 80 m no hay σz (TOTERR) ni escenarios de DEM
         sigma = None
         if window is not None:
             try:
@@ -783,6 +837,11 @@ def run_analysis(ctx: AppContext, req: AnalysisRequest) -> AnalysisResult:
         return run_uncertainty(window, sigma_w, obs, horizon, sky_w, vp, tp, hp, catalog.uncertainty_params(cfg), m_w,
                                far=far, cache_dir=cdir, link=link_w)
     _score_window(ctx, req, res, profile, sp, vp, tp, hp, vis, c_sup, lim_frac, slope90, unc_on, link_ctx)
+    if obs.mode is HorizonMode.FAR_FIELD:
+        _far_field_score_texts(res.score)
+        if req.with_uncertainty:
+            res.score.assumptions += ("Rango de incertidumbre no calculado en el modo de 80 m: no hay σz (TOTERR) a esa resolución; "
+                                      "el error medido del horizonte está en el aviso de resolución.",)
     if step_eff != req.step_s:
         res.score.assumptions += (f"Paso pedido {req.step_s:g} s > máximo {float(cfg['timeline']['max_step_s']):g} s (se perderían "
                                   f"eventos cortos): la serie se muestrea internamente a {step_eff:g} s.",)
@@ -961,6 +1020,19 @@ def _score_window(ctx, req, res, profile, sp, vp, tp, hp, vis, c_sup, lim_frac, 
                                                   float(cens.mean()))
 
 
+def _far_field_score_texts(sc) -> None:
+    """Sustituye en el score los textos de «esfera lisa» (falsos con un horizonte de 80 m) y pone el motivo propio del modo."""
+    def fix(t: str) -> str:
+        for a, b in _FAR_TEXT_FIXES:
+            t = t.replace(a, b)
+        return t
+    sc.assumptions = tuple(
+        far_field_warning_text() if a == STANDARD_WARNINGS_ES[WarningCode.NO_DEM_SMOOTH_SPHERE] else
+        FAR_FIELD_SCORE_TEXT if a == STANDARD_WARNINGS_ES[WarningCode.NO_TERRAIN_DATA_SCORE] else fix(a) for a in sc.assumptions)
+    sc.gates = tuple(dataclasses.replace(g, reason=fix(g.reason)) for g in sc.gates)
+    sc.verdict_reason, sc.range_note = fix(sc.verdict_reason), fix(sc.range_note)
+
+
 def _countdowns(req, obs, horizon, vp, tp) -> tuple[Countdown, ...]:
     now = _utc_et(req.now_utc or req.start_utc)
     days = min(tp.countdown_search_days, (_utc_et(UTC_MAX) - now) / 86400.0 - 0.01)
@@ -973,11 +1045,15 @@ def _countdowns(req, obs, horizon, vp, tp) -> tuple[Countdown, ...]:
 def _warnings(res: AnalysisResult, extra: Sequence[ScientificWarning], lim_frac: float) -> tuple[ScientificWarning, ...]:
     W = Severity
     dem = res.observer.mode is HorizonMode.DEM
+    far_mode = res.observer.mode is HorizonMode.FAR_FIELD
     out = [_w(c, W.INFO) for c in ALWAYS_SHOWN_WARNINGS if c is not WarningCode.DEM_EFFECTIVE_RESOLUTION or dem]
+    if far_mode:   # el esquema de exportación exige este aviso fuera de la esfera lisa: aquí con la resolución real (80 m)
+        out.append(_w(WarningCode.DEM_EFFECTIVE_RESOLUTION, W.INFO, "far_field_80m",
+                      "El DEM polar LOLA de este punto tiene 80 m/píxel: cráteres y relieve menores de ~200 m no están evaluados."))
     out.append(_w(WarningCode.NOT_RF_LINK, W.INFO))
     out += list(extra)
     h = res.horizon
-    if dem and h.limited.any():
+    if (dem or far_mode) and h.limited.any():
         out.append(_w(WarningCode.HORIZON_LOWER_BOUND, W.WARNING, f"{100 * h.limited.mean():.1f} % de azimutes limitados"))
         if lim_frac > 0:
             out.append(_w(WarningCode.HORIZON_TRUNCATED, W.WARNING, f"{100 * lim_frac:.1f} % de azimutes relevantes sin cobertura"))
@@ -988,7 +1064,8 @@ def _warnings(res: AnalysisResult, extra: Sequence[ScientificWarning], lim_frac:
     if res.score is not None:
         out += [_w(WarningCode.SCORE_UNCALIBRATED, W.INFO), _w(WarningCode.ROCKS_NOT_MODELED, W.INFO)]
         if res.score.partial:
-            out.append(_w(WarningCode.NO_TERRAIN_DATA_SCORE, W.WARNING))
+            out.append(_w(WarningCode.NO_TERRAIN_DATA_SCORE, W.WARNING, "far_field_80m", FAR_FIELD_SCORE_TEXT) if far_mode
+                       else _w(WarningCode.NO_TERRAIN_DATA_SCORE, W.WARNING))
     seen, uniq = set(), []
     for w in out:   # un aviso por (código, contexto); el primero manda
         if (w.code, w.context) not in seen:
