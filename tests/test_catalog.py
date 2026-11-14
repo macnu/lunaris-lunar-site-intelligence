@@ -17,10 +17,10 @@ def cfg():
 def test_real_sites():
     sites = catalog.load_sites(CFG_DIR / "sites.json")
     by = {s.id: s for s in sites}
-    assert len(sites) == len(by) == 36   # 32 + 4 regiones Artemis III solo de la lista de 2024 (sin coordenadas)
+    assert len(sites) == len(by) == 36   # 32 + 4 regiones Artemis III solo de la lista de 2024 (centro digitalizado de la figura NASA)
     assert by["site04"].dem_prefix == "Site04" and by["site04"].has_dem
     assert by["apollo11"].lat_deg == pytest.approx(0.6741)
-    assert any(s.lat_deg is None for s in sites)  # null conservado
+    assert all(s.lat_deg is not None for s in sites)  # ya no queda ninguna sin coordenadas
 
 
 def test_params_from_real_config(cfg):

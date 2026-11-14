@@ -190,7 +190,7 @@ def test_apollo11_mission_site_before_apollo_crater(full, q):
 @pytest.mark.slow
 def test_mission_entries_total_and_fields(full):
     sites = full[full["feature_type"] == "Sitio de misión"]
-    assert len(sites) == 32 and len(full) == 9087 + 32      # 36 de sites.json menos 4 sin coordenadas (solo lista Artemis III 2024)
+    assert len(sites) == 36 and len(full) == 9087 + 36      # las 36 de sites.json, ya todas con coordenadas (4 de la lista 2024 digitalizadas de la figura NASA)
     a = full[full["name"] == "Apolo 11 (Eagle)"].iloc[0]
     assert (a["confianza"], a["fecha"], a["programa"]) == ("publicado", "1969-07-20", "Apollo")
     assert a["lat_deg"] == pytest.approx(0.6741) and not a["has_dem"]
