@@ -1,0 +1,242 @@
+{
+ "schema_version": "1.0.0",
+ "_nota": "Estaciones terrestres para la conectividad DTE. SOLO figuran números verificados en fuente oficial (campo source_*); lo no verificado queda 'a verificar' y la estación no se usa por defecto (default_enabled=false). Etiquetas de confianza: [pub] publicado en documento oficial; [sup] suposición de diseño. Coordenadas geodésicas WGS 84 (elipsoide a=6378137 m, 1/f=298.257223563): la estación es un punto sobre el elipsoide terrestre.",
+ "earth_model": {
+  "frame": "IAU_EARTH (pck00011.tpc)",
+  "precision": "IAU_EARTH ignora nutación, movimiento polar y UT1-UTC. Medido frente a JPL Horizons (ITRF93, apparent airless) en 30 instantes de 2026-12 para DSS-14/-43/-63: diferencia máxima 0,072° (rms 0,055°); con el PCK binario de orientación terrestre en ITRF93, 0,0005°. 0,07° desplaza una salida/puesta de la Luna unos 20 s: despreciable frente a la rejilla de 600 s, así que no se descarga el kernel binario (5-19 MB y solo cubre 2000-2126). Ver docs/science/luna-spice-sitios.md §Estaciones y tests/test_ground_stations.py."
+ },
+ "default_network": "DSN",
+ "handoff_merge_tol_s": 20.0,
+ "_handoff_merge_tol_s": "[cal] huecos <= 20 s entre ventanas de estaciones se fusionan al unir la red. Fundamento: (1) la elevacion de la Luna cambia ~0,004 deg/s, asi que el modelo IAU_EARTH (error 0,07 deg, ver earth_model) mueve cada cruce de la elevacion minima ~17 s: un hueco de unos segundos entre dos estaciones en traspaso esta por debajo de la precision del modelo; (2) los cruces se interpolan linealmente sobre la rejilla de 600 s (error de segundos): en 1-dic-2026..1-jun-2027 hay 2 huecos de 0,4 y 3,4 s (artefacto); (3) el hueco real mas corto medido en ese periodo dura 44 s (verdad a 2 s), por encima de la tolerancia. Revision independiente: docs/validation/revision-enlace.md (B2).",
+ "link_directions": {
+  "_nota": "link_direction: 'receive' = min_elevation_deg de cada estacion (6,0 deg DSN [pub], 810-005/301 Rev. P 2.2.2/2.2.4); 'transmit' = tx_min_elevation_deg (10,1 deg [pub], 810-005/301 Rev. P 2.2.1: 'In general, there is no transmission allowed below 10.1 degrees elevation by any antenna at any power level'; genericos 10,0 baja potencia, 13,5 alta; verificado 14/11/2026 en data/raw/earth/301P.txt); 'both' = intersección (la mayor de las dos por estacion). NO modelado: alta potencia 13,6 deg (13,5 + 0,1) ni DSS-43 17,6 deg (>20 kW), mascara de terreno por antena, ocupacion DSN. Estaciones sin tx_min_elevation_deg (ESTRACK): se usa la de recepcion [sup].",
+  "default": "receive"
+ },
+ "stations": {
+  "DSS-14": {
+   "name": "Goldstone DSS-14 (70 m), California, EE. UU.",
+   "complex": "Goldstone",
+   "operator": "NASA/JPL (DSN)",
+   "lat_deg": 35.42590087,
+   "lon_deg_e": 243.11046179,
+   "alt_m": 1001.39,
+   "dms": "35°25'33.24312\" N, 243°06'37.66244\" E, h 1001.390 m",
+   "tz": "America/Los_Angeles",
+   "min_elevation_deg": 6.0,
+   "tx_min_elevation_deg": 10.1,
+   "tx_min_elevation_confidence": "publicado",
+   "min_elevation_confidence": "publicado",
+   "position_confidence": "publicado",
+   "verified": true,
+   "default_enabled": true,
+   "source_position": "DSN 810-005, módulo 301 (Coverage and Geometry), Rev. P (22/05/2026), Tabla 5, WGS 84: https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301P.pdf",
+   "source_elevation": "rx_min_elevation_deg = 6,0° [pub]: 810-005/301 Rev. P §2.2.2 y §2.2.4 ('límite mecánico de elevación ≈ 6° en antenas az-el'; límites genéricos de recepción 6,0°) (https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301P.pdf); límites mecánicos medidos 5,923° (34 m) y 5,962° (70 m) en NTRS 20120004035 (https://ntrs.nasa.gov/api/citations/20120004035/downloads/20120004035.pdf). La máscara de terreno real de cada antena (figuras 10-25 de 301) puede ser mayor en algunos azimuts y NO se modela."
+  },
+  "DSS-43": {
+   "name": "Canberra DSS-43 (70 m), Tidbinbilla, ACT, Australia",
+   "complex": "Canberra",
+   "operator": "NASA/JPL (DSN)",
+   "lat_deg": -35.40242423,
+   "lon_deg_e": 148.98126731,
+   "alt_m": 688.867,
+   "dms": "35°24'8.72724\" S, 148°58'52.56231\" E, h 688.867 m",
+   "tz": "Australia/Canberra",
+   "min_elevation_deg": 6.0,
+   "tx_min_elevation_deg": 10.1,
+   "tx_min_elevation_confidence": "publicado",
+   "min_elevation_confidence": "publicado",
+   "position_confidence": "publicado",
+   "verified": true,
+   "default_enabled": true,
+   "source_position": "DSN 810-005, módulo 301 (Coverage and Geometry), Rev. P (22/05/2026), Tabla 5, WGS 84: https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301P.pdf",
+   "source_elevation": "rx_min_elevation_deg = 6,0° [pub]: 810-005/301 Rev. P §2.2.2 y §2.2.4 ('límite mecánico de elevación ≈ 6° en antenas az-el'; límites genéricos de recepción 6,0°) (https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301P.pdf); límites mecánicos medidos 5,923° (34 m) y 5,962° (70 m) en NTRS 20120004035 (https://ntrs.nasa.gov/api/citations/20120004035/downloads/20120004035.pdf). La máscara de terreno real de cada antena (figuras 10-25 de 301) puede ser mayor en algunos azimuts y NO se modela."
+  },
+  "DSS-63": {
+   "name": "Madrid DSS-63 (70 m), Robledo de Chavela, España",
+   "complex": "Madrid",
+   "operator": "NASA/JPL (DSN)",
+   "lat_deg": 40.43120975,
+   "lon_deg_e": 355.75199146,
+   "alt_m": 864.816,
+   "dms": "40°25'52.35510\" N, 355°45'7.16924\" E, h 864.816 m",
+   "tz": "Europe/Madrid",
+   "min_elevation_deg": 6.0,
+   "tx_min_elevation_deg": 10.1,
+   "tx_min_elevation_confidence": "publicado",
+   "min_elevation_confidence": "publicado",
+   "position_confidence": "publicado",
+   "verified": true,
+   "default_enabled": true,
+   "source_position": "DSN 810-005, módulo 301 (Coverage and Geometry), Rev. P (22/05/2026), Tabla 5, WGS 84: https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301P.pdf",
+   "source_elevation": "rx_min_elevation_deg = 6,0° [pub]: 810-005/301 Rev. P §2.2.2 y §2.2.4 ('límite mecánico de elevación ≈ 6° en antenas az-el'; límites genéricos de recepción 6,0°) (https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301P.pdf); límites mecánicos medidos 5,923° (34 m) y 5,962° (70 m) en NTRS 20120004035 (https://ntrs.nasa.gov/api/citations/20120004035/downloads/20120004035.pdf). La máscara de terreno real de cada antena (figuras 10-25 de 301) puede ser mayor en algunos azimuts y NO se modela."
+  },
+  "NNO-1": {
+   "name": "ESTRACK New Norcia DSA 1 (35 m), Australia Occidental",
+   "complex": "New Norcia",
+   "operator": "ESA (ESTRACK)",
+   "lat_deg": -31.0482181944,
+   "lon_deg_e": 116.1915059167,
+   "alt_m": 252.257,
+   "tz": "Australia/Perth",
+   "min_elevation_deg": null,
+   "min_elevation_assumed_deg": 6.0,
+   "min_elevation_confidence": "a verificar [sup]",
+   "position_confidence": "publicado (NAIF/JPL NDOSL, WGS 84)",
+   "verified": false,
+   "default_enabled": false,
+   "source_position": "NAIF/JPL, kernel FK de estaciones NDOSL, coordenadas planetodéticas WGS 84 (ITRF93): https://naif.jpl.nasa.gov/pub/naif/generic_kernels/fk/stations/ndosl_190716_v02.tf",
+   "source_elevation": "a verificar [sup]: ESA publica una MÁSCARA DE HORIZONTE POR ACIMUT (no una elevación única) en el ESTRACK Facilities Manual, DOPS-ESTR-OPS-MAN-1001-OPS-ONN issue 1 rev 1 (19/09/2008), Figura 35, p. 78 del EFM: máximo ≈ 8.5 ° (rango mecánico 0-90°, Tabla 8). Se mantiene el valor supuesto de 6° (sin cambio de resultados) porque la máscara no es un escalar publicado; en NNO-1 la máscara supera 6° aproximadamente entre 175° y 235° de acimut. Copia del EFM: https://qsl.net/kj6dzb/images/GEO/DOPS-ESTR-OPS-MAN-1001-OPS-ONN_ESTRACK_Facilities_Manual_issue1.1.pdf",
+   "horizon_mask_max_deg_read": 8.5,
+   "horizon_mask_confidence": "derivado: máscara por acimut en figura (no hay tabla numérica); máximo leído a ojo, ±0,3°",
+   "position_crosscheck": "EFM Tabla 8 (p. 77): 31°02'53.61\" S, 116°11'29.40\" E, h 252.2558 m: coincide con NAIF NDOSL (<1 m)"
+  },
+  "CEB-1": {
+   "name": "ESTRACK Cebreros DSA 2 (35 m), Ávila, España",
+   "complex": "Cebreros",
+   "operator": "ESA (ESTRACK)",
+   "lat_deg": 40.4526908333,
+   "lon_deg_e": 355.6324527222,
+   "alt_m": 794.073,
+   "tz": "Europe/Madrid",
+   "min_elevation_deg": null,
+   "min_elevation_assumed_deg": 6.0,
+   "min_elevation_confidence": "a verificar [sup]",
+   "position_confidence": "publicado (NAIF/JPL NDOSL, WGS 84)",
+   "verified": false,
+   "default_enabled": false,
+   "source_position": "NAIF/JPL, kernel FK de estaciones NDOSL, coordenadas planetodéticas WGS 84 (ITRF93): https://naif.jpl.nasa.gov/pub/naif/generic_kernels/fk/stations/ndosl_190716_v02.tf",
+   "source_elevation": "a verificar [sup]: ESA publica una MÁSCARA DE HORIZONTE POR ACIMUT (no una elevación única) en el ESTRACK Facilities Manual, DOPS-ESTR-OPS-MAN-1001-OPS-ONN issue 1 rev 1 (19/09/2008), Figura 7, p. 21 del EFM: máximo ≈ 5.5 ° (rango mecánico 0-90°, Tabla 2). Se mantiene el valor supuesto de 6° (sin cambio de resultados) porque la máscara no es un escalar publicado; en NNO-1 la máscara supera 6° aproximadamente entre 175° y 235° de acimut. Copia del EFM: https://qsl.net/kj6dzb/images/GEO/DOPS-ESTR-OPS-MAN-1001-OPS-ONN_ESTRACK_Facilities_Manual_issue1.1.pdf",
+   "horizon_mask_max_deg_read": 5.5,
+   "horizon_mask_confidence": "derivado: máscara por acimut en figura (no hay tabla numérica); máximo leído a ojo, ±0,3°",
+   "position_crosscheck": "EFM Tabla 2 (p. 21): 40°27'09.68\" N, 4°22'03.18\" W, h 794.095 m: coincide con NAIF NDOSL (<1 m)"
+  },
+  "MLG-1": {
+   "name": "ESTRACK Malargüe DSA 3 (35 m), Mendoza, Argentina",
+   "complex": "Malargüe",
+   "operator": "ESA (ESTRACK)",
+   "lat_deg": -35.7759702222,
+   "lon_deg_e": 290.6018184444,
+   "alt_m": 1571.768,
+   "tz": "America/Argentina/Mendoza",
+   "min_elevation_deg": null,
+   "min_elevation_assumed_deg": 6.0,
+   "min_elevation_confidence": "a verificar [sup]",
+   "position_confidence": "publicado (NAIF/JPL NDOSL, WGS 84)",
+   "verified": false,
+   "default_enabled": false,
+   "source_position": "NAIF/JPL, kernel FK de estaciones NDOSL, coordenadas planetodéticas WGS 84 (ITRF93): https://naif.jpl.nasa.gov/pub/naif/generic_kernels/fk/stations/ndosl_190716_v02.tf",
+   "source_elevation": "a verificar: Malargüe (2012) no figura en el EFM issue 1 rev 1 (2008, solo CEB-1 y NNO-1 de los DSA); no se ha localizado su máscara. Se aplica el valor SUPUESTO min_elevation_assumed_deg [sup]; la estación no se usa por defecto."
+  }
+ },
+ "networks": {
+  "DSN": {
+   "label": "NASA DSN (Goldstone, Madrid, Canberra)",
+   "stations": [
+    "DSS-14",
+    "DSS-63",
+    "DSS-43"
+   ],
+   "operator": "NASA"
+  },
+  "ESTRACK": {
+   "label": "ESA ESTRACK (New Norcia, Cebreros, Malargüe)",
+   "stations": [
+    "NNO-1",
+    "CEB-1",
+    "MLG-1"
+   ],
+   "operator": "ESA",
+   "min_elevation_override_deg": 6.0,
+   "override_label": "[sup] elevación mínima ESTRACK a verificar; se iguala a la del DSN. ESA publica máscaras por acimut (EFM 2008): CEB-1 ≤ ~5,5°, NNO-1 ≤ ~8,5°; MLG-1 sin máscara localizada. Requisito ESA-DOPS-MGT-TN-0014 Issue 1.2: TX mínima 5° para estaciones cislunares (requisito de diseño, no máscara as-built)."
+  },
+  "DSN+ESTRACK": {
+   "label": "DSN + ESTRACK",
+   "stations": [
+    "DSS-14",
+    "DSS-63",
+    "DSS-43",
+    "NNO-1",
+    "CEB-1",
+    "MLG-1"
+   ],
+   "operator": "NASA+ESA"
+  }
+ },
+ "networks_not_available": {
+  "NSN": {
+   "label": "NASA Near Space Network (LEGS)",
+   "status": "a verificar",
+   "nota": "Búsqueda 14/11/2026: hay posiciones publicadas de WS1 (NAIF NDOSL; NEN UG §9.2) y de LEGS-1/-2 (folleto LEGS r20), pero NINGUNA elevación mínima ni máscara de NSN/LEGS en documento oficial (LEGS r25: solo rango mecánico 0-90°; NSN UG 457-GUIDE-0001 y NEN UG 453-UG-002905 solo dan G/T a 5°/10°). LEGS-1 figura como capacidad futura. Sin elevación verificada no se crea la red NSN; ver stations_unverified."
+  },
+  "IDSN_KSAT_CNSA": {
+   "status": "a verificar",
+   "nota": "IDSN (Byalalu, 32 m): solo Wikipedia y G/T a 45°, sin fuente oficial de coordenadas ni elevación. KSAT Lunar (Yuma, Australia Occidental, España): sin coordenadas ni elevación publicadas. CNSA: no se encontró documento público. Usuda: ver stations_unverified."
+  }
+ },
+ "custom_network": {
+  "nota": "red personalizada: lista de (lat_deg, lon_deg_e, min_elevation_deg[, tz]); el usuario asume los números."
+ },
+ "stations_unverified": {
+  "_nota": "Estaciones con posición publicada pero SIN elevación mínima verificada (o sin altura): NO pertenecen a ninguna red seleccionable y ninguna función las carga. Informativas. Ver docs/validation/estaciones-adicionales.md.",
+  "WS1": {
+   "name": "NASA White Sands WS1 (18,3 m), Nuevo México, EE. UU.",
+   "operator": "NASA (NEN/NSN)",
+   "lat_deg": 32.540754944444444,
+   "lon_deg_e": 253.3879004722222,
+   "alt_m": 1456.545,
+   "tz": "America/Denver",
+   "lunar_dte": "sí, histórico: apoya a LRO (NEN User's Guide 453-UG-002905 Rev. 4, §9.2); servicio a otros usuarios lunares no documentado",
+   "min_elevation_deg": null,
+   "verified": false,
+   "default_enabled": false,
+   "position_confidence": "publicado (NAIF NDOSL 'WS1S'; la NEN UG §9.2 da 32°32'27\" N, 106°36'44\" W, coincide)",
+   "source_position": "NAIF/JPL NDOSL ndosl_190716_v02.tf (WGS 84): https://naif.jpl.nasa.gov/pub/naif/generic_kernels/fk/stations/ndosl_190716_v02.tf; NEN UG: https://explorers.larc.nasa.gov/2021APMIDEX/pdf_files/453-UG-002905.pdf",
+   "source_elevation": "a verificar: ni la NEN UG ni la NSN UG (457-GUIDE-0001, 21/02/2023) dan máscara ni elevación mínima (solo G/T a 5°/10°)"
+  },
+  "LEGS-1": {
+   "name": "NASA LEGS-1 (20 m), White Sands, Nuevo México, EE. UU.",
+   "operator": "NASA (NSN, GOCO)",
+   "lat_deg": 32.544863,
+   "lon_deg_e": 253.387496,
+   "alt_m": null,
+   "tz": "America/Denver",
+   "lunar_dte": "sí, es su misión: comunicaciones directas a Tierra y navegación de GEO a cislunar y más allá (LEGS Brochure r20 y r25); la NSN UG §3.4.1 la lista como capacidad FUTURA (comprometida)",
+   "min_elevation_deg": null,
+   "verified": false,
+   "default_enabled": false,
+   "position_confidence": "publicado en folleto (lat/lon sin altura): LEGS Brochure r20",
+   "source_position": "LEGS Brochure r20: https://essp.larc.nasa.gov/EVI-6/pdf_files/LEGS%20Brochure%20r20.pdf ('White Sands, USA: 32.544863, -106.612504'); la r25 no da coordenadas",
+   "source_elevation": "a verificar: la r25 solo da rango mecánico 'Antenna Travel Range: 0 to 90 Elevation' (no es una máscara de operación); sin altura ni fecha de operación verificadas"
+  },
+  "LEGS-2": {
+   "name": "NASA LEGS-2, Matjiesfontein, Sudáfrica",
+   "operator": "NASA (NSN, GOCO)",
+   "lat_deg": -33.231224,
+   "lon_deg_e": 20.58163,
+   "alt_m": null,
+   "tz": "Africa/Johannesburg",
+   "lunar_dte": "sí (misma misión LEGS); fecha de operación no verificada",
+   "min_elevation_deg": null,
+   "verified": false,
+   "default_enabled": false,
+   "position_confidence": "el folleto la marca '(TBD)'",
+   "source_position": "LEGS Brochure r20 ('Matjiesfontein, South Africa: -33.231224, 20.58163 (TBD)')",
+   "source_elevation": "a verificar: sin elevación mínima ni altura"
+  },
+  "UDSC-64": {
+   "name": "JAXA Usuda Deep Space Center (64 m), Nagano, Japón",
+   "operator": "JAXA/ISAS",
+   "lat_deg": 36.13166666666667,
+   "lon_deg_e": 138.36499999999998,
+   "alt_m": 1456.0,
+   "tz": "Asia/Tokyo",
+   "lunar_dte": "a verificar (la página solo describe la antena de 64 m; JAXA indica que está superada por la de 54 m de Misasa)",
+   "min_elevation_deg": null,
+   "verified": false,
+   "default_enabled": false,
+   "position_confidence": "publicado, a precisión de segundo de arco; la altura de la página no dice si es elipsoidal u ortométrica",
+   "source_position": "JAXA/ISAS: https://www.isas.jaxa.jp/en/about/facilities/usuda.html ('Long. 138° 21' 54\" E, Lat. 36° 07' 54\" N, Altitude 1,456 m')",
+   "source_elevation": "a verificar: la página no da elevaciones"
+  }
+ }
+}

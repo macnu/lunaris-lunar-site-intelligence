@@ -1,0 +1,917 @@
+  LUNAR SITE
+  INTELLIGENCE
+
+      Arquitectura técnica, modelo científico y plan de
+      implementación para el reto NASA Space Apps Challenge 2026
+      · Lunar Landing Site Navigator
+
+           Documento de trabajo · Versión 1.0 · 13 de noviembre de 2026
+
+PROPUESTA DE PRODUCTO
+
+Una herramienta de apoyo a decisiones que convierte datos topográficos y efemérides lunares en una
+comparación visual, temporal y explicable de emplazamientos candidatos en el polo sur de la Luna.
+LUNAR SITE INTELLIGENCE          NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+Resumen ejecutivo
+
+Lunar Site Intelligence (LSI) será una aplicación web científica y visual para evaluar, en un mismo entorno,
+cómo el relieve local condiciona la visibilidad del Sol y de la Tierra desde distintos puntos candidatos del
+polo sur lunar y en distintas fechas. La solución combina un núcleo computacional verificable con una
+interfaz visual que permite explorar el terreno, consultar el horizonte y comparar ventanas temporales.
+
+La propuesta responde directamente al reto Lunar Landing Site Navigator: facilitar que planificadores,
+educadores y público comparen emplazamientos y fechas, visualizando la posición del Sol y la Tierra
+respecto al horizonte local para estudiar el potencial de generación de energía y las ventanas de
+comunicación directa con la Tierra. [1]
+
+Decisión de producto
+
+Dimensión                        Decisión
+Enfoque                          Híbrido: cálculo científico riguroso + interfaz visual potente.
+Representación                   Ambas: explorador de terreno 3D y dashboard de indicadores/cronograma.
+Nombre de trabajo                Lunar Site Intelligence (LSI).
+Primer emplazamiento de          Site04 — Shackleton rim.
+laboratorio
+Comparación inicial              Site04 Shackleton rim · Site11 de Gerlache rim · Site23 Malapert massif.
+Principio de diseño              Transparencia: mostrar indicadores, fuentes, incertidumbre y límites; evitar un ranking opaco.
+
+ Resultado mínimo que debe poder demostrarse
+
+● Cargar un DEM lunar real y visualizar un recorte de terreno en 3D.
+
+● Calcular el horizonte topográfico de 360° desde un punto de observación.
+
+● Calcular las direcciones aparentes del Sol y la Tierra con SPICE, en un marco lunar correctamente
+     transformado.
+
+● Determinar cuándo cada cuerpo supera el horizonte local y generar una línea temporal.
+
+● Comparar tres áreas candidatas con métricas separadas y una explicación de la confianza de los datos.
+
+  Idea central: LSI no debe limitarse a dibujar el Sol y la Tierra sobre un mapa. Debe
+  demostrar que sus posiciones se han calculado en el sistema de referencia correcto y que la
+  visibilidad está condicionada por el relieve real.
+
+ Alcance y cautelas
+
+  El MVP calculará visibilidad geométrica. No afirmará que una ventana solar equivale a potencia eléctrica
+  disponible ni que ver geométricamente la Tierra garantiza un enlace de radio operativo. Para eso harían
+  falta modelos adicionales de paneles, orientación, degradación, obstáculos de antena, potencia,
+  frecuencia, ganancia, ruido y presupuesto de enlace.
+
+Versión 1.0 · 13 noviembre 2026                                                                                                  2
+LUNAR SITE INTELLIGENCE          NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+1. El reto y la oportunidad
+
+El polo sur lunar es atractivo para la exploración por la combinación de zonas elevadas con iluminación
+favorable, regiones permanentemente sombreadas y oportunidades científicas asociadas a volátiles. La
+geometría solar es especialmente sensible al relieve porque el Sol permanece bajo sobre el horizonte en
+latitudes polares. La planificación necesita evaluar no solo una coordenada, sino el comportamiento del
+emplazamiento a lo largo del tiempo.
+
+       Figura 1. Esquema conceptual de áreas candidatas. No es un mapa topográfico ni representa coordenadas reales; sirve para
+                                                                          situar el alcance de la comparación.
+
+ Problema que aborda LSI
+
+● Las herramientas científicas existentes pueden ser complejas para usuarios que necesitan comparar
+     rápidamente lugares y fechas.
+
+● La iluminación cambia con la posición del Sol y con el horizonte local; un punto cercano puede tener
+     condiciones muy distintas por una cresta o una pared de cráter.
+
+● La comunicación directa con la Tierra depende de una geometría distinta: la Tierra también puede quedar
+     oculta por el relieve.
+
+● Una cifra única de idoneidad puede ocultar compromisos entre energía, comunicaciones, pendiente y
+     calidad de los datos.
+
+Objetivo del producto
+
+Construir un navegador que permita responder preguntas operativas del tipo: «¿Qué punto ofrece más
+tiempo de Sol visible durante esta fecha?», «¿Cuándo se solapan visibilidad solar y visibilidad geométrica
+de la Tierra?» o «¿Qué emplazamiento es más sensible a la incertidumbre topográfica?»
+
+Usuarios objetivo
+
+Usuario                          Necesidad
+Planificador de misión           Comparar candidatos, ventanas temporales y restricciones del terreno.
+Ingeniero / científico           Inspeccionar hipótesis, marcos de referencia, fuentes y precisión.
+Educador / público               Comprender visualmente por qué el relieve altera la visibilidad.
+Equipo de operaciones            Identificar ventanas geométricas favorables y sus límites.
+
+Versión 1.0 · 13 noviembre 2026                                                                                                  3
+LUNAR SITE INTELLIGENCE          NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+ Dentro del MVP
+
+● Exploración 3D de una región real con DEM.
+● Perfil de horizonte 360° en un punto configurable.
+● Posición aparente del Sol y de la Tierra a partir de SPICE.
+● Visibilidad geométrica y cronograma temporal.
+● Comparación inicial de tres sitios y panel de confianza/calidad.
+
+ Fuera del MVP
+
+● Predicción de potencia eléctrica real y dimensionamiento de paneles/baterías.
+● Presupuesto de enlace RF y disponibilidad de comunicaciones garantizada.
+● Planificación de trayectorias de rover, navegación autónoma o diseño de base.
+● Modelos térmicos detallados, radiación, polvo o geotecnia avanzada.
+● IA generativa o agentes en el núcleo científico: no aportan rigor al cálculo principal.
+
+Versión 1.0 · 13 noviembre 2026                                                            4
+LUNAR SITE INTELLIGENCE                                                                NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+2. Datos y fuentes científicas
+
+La ventaja competitiva del proyecto debe ser el uso correcto de datos públicos de NASA y la trazabilidad de
+cómo se transforman en resultados.
+
+2.1 Topografía: LOLA / PGDA
+
+La página de NASA Goddard PGDA para los emplazamientos del polo sur ofrece, por sitio, mapas de
+elevación interpolada (LDEM), nubes de puntos ajustadas (XYZI), mapas de conteo de retornos (LDEC),
+pendiente, incertidumbre vertical total, incertidumbre de pendiente y hasta 100 clones de DEM. Los
+GeoTIFF de estos productos se distribuyen en una cuadrícula de 5 m/píxel y coordenadas X/Y
+estereográficas polares del sur, en metros, con referencia MOON_ME y efemérides DE421. [2]
+
+Producto / capa                  Uso en LSI                                            Prioridad
+
+LDEM                             Superficie base para terreno, sombreado y horizonte.  Imprescindible
+
+Slope                            Filtro/indicador preliminar de pendiente local.       Alta
+
+LDEC / densidad de retornos Contexto de soporte observacional del DEM.                 Alta
+
+Total Z uncertainty              Sensibilidad de elevación y confianza.                Alta
+
+Slope uncertainty                Confianza en pendiente calculada.                     Media
+
+100 clones                       Análisis de sensibilidad ante variaciones del DEM.    Stretch
+
+Advertencia esencial: que un GeoTIFF tenga una celda de 5 m no significa que cada píxel tenga una
+medición independiente con resolución efectiva de 5 m. La resolución efectiva de los productos LOLA
+depende de la densidad de las trazas del altímetro; existen huecos interpolados entre trazas. El mapa de
+conteos y la incertidumbre deben acompañar al análisis. [2][3]
+
+2.2 Topografía mejorada: Shape-from-Shading
+
+NASA PGDA publica modelos SDEM de 5 m/píxel para 13 regiones candidatas Artemis III. Estos modelos
+usan imágenes LROC NAC para mejorar el detalle efectivo de los DEM LOLA en zonas iluminadas,
+conservando coherencia con la referencia geodésica LOLA. Incluyen elevación, hillshade, ortomosaicos,
+cobertura de imágenes, mapas de resolución de entrada, diferencias SDEM–LDEM, pendientes y rugosidad.
+[3]
+
+Recomendación: usar primero el producto LOLA de Site04 para lograr un pipeline reproducible y ligero;
+después comprobar si la región de interés dispone de SDEM compatible y evaluar sus diferencias. No
+mezclar capas sin verificar que sus referencias, extensiones, resoluciones y datums son compatibles.
+
+2.3 Catálogo de sitios inicial
+
+Código               Área candidata          Papel en el prototipo
+Site04               Shackleton rim          Primer caso de laboratorio; depurar CRS, DEM y horizonte.
+Site11               de Gerlache rim         Segundo caso para comparar geometría y condiciones.
+Site23               Malapert massif         Tercer caso; contraste topográfico y de visibilidad.
+
+2.4 Fuentes complementarias
+
+Fuente                           Qué aporta                                            Uso previsto
+NASA NAIF SPICE                  Kernels, efemérides, orientación y transformaciones.  Cálculo aparente Sol/Tierra.
+JPL Horizons                     Efemérides y contraste independiente.                 Validación puntual de posiciones.
+
+Versión 1.0 · 13 noviembre 2026                                                                                           5
+LUNAR SITE INTELLIGENCE                                                    NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+Fuente                           Qué aporta                                Uso previsto
+LROC / ShadowCam                                                           Contexto visual y validación cualitativa.
+                                 Imágenes del terreno, incluidas regiones
+NASA Moon Trek                   sombreadas.                               Inspección y contraste del área.
+
+                                 Exploración geoespacial lunar.
+
+Fuentes principales para descargar o consultar
+
+• PGDA — LOLA South Pole Landing Site DEMs: https://pgda.gsfc.nasa.gov/products/78
+• PGDA — South Pole LOLA DEMs: https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/
+• PGDA — Enhanced Topography / Shape-from-Shading: https://pgda.gsfc.nasa.gov/products/104
+• NAIF SPICE: https://naif.jpl.nasa.gov/naif/
+• JPL Horizons: https://ssd.jpl.nasa.gov/horizons/
+• LROC: https://data.lroc.im-ldi.com/lroc/
+• NASA Moon Trek: https://trek.nasa.gov/moon/
+
+Versión 1.0 · 13 noviembre 2026                                                                                       6
+LUNAR SITE INTELLIGENCE          NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+ 3. Modelo científico y motor de cálculo
+
+  El núcleo científico se divide en cuatro pasos: terreno, efemérides, visibilidad y métricas. Cada paso debe
+  tener entradas, salidas y pruebas unitarias claras.
+
+ 3.1 Motor de terreno (Terrain Engine)
+
+● Leer el GeoTIFF con Rasterio/GDAL y conservar CRS, affine transform, nodata, unidades y metadatos.
+● Recortar una ventana alrededor del punto de observación para reducir memoria y tiempo de cálculo.
+● Convertir coordenadas del mapa a índices de píxel y comprobar que el punto cae dentro de la cobertura
+
+     válida.
+● Calcular o leer pendientes; evitar recalcular toda la región si existe una capa validada.
+● Construir el horizonte local H(azimut) mediante ray casting sobre el DEM.
+
+     Figura 2. Geometría conceptual del horizonte. Un cuerpo celeste es visible si su elevación aparente supera el horizonte del
+                                    terreno en su azimut, con los ajustes de disco angular que se decida implementar.
+
+3.2 Cálculo del horizonte 360°
+
+Para cada azimut θ, se lanza un rayo desde el observador a distintas distancias r. Para cada muestra se
+obtiene la diferencia de altura Δz respecto a la altura del observador y se calcula el ángulo de elevación. El
+horizonte es el máximo ángulo observado en esa dirección:
+
+H(θ) = maxᵣ [ atan2( z(r,θ) − z₀, r ) ]
+
+Parámetros configurables del prototipo: altura del observador 1, 2 o 5 m; radio máximo del horizonte;
+separación angular inicial de 1°; paso de muestreo adaptativo según resolución y distancia. Para cada
+dirección se debe evitar que valores nodata o huecos fuera de cobertura se conviertan en obstáculos
+falsos.
+
+3.3 Motor de efemérides (Ephemeris Engine)
+
+SPICE calculará los vectores geométricos/aparentes del Sol y la Tierra para el instante seleccionado. La
+posición debe transformarse desde el marco de referencia utilizado por SPICE al marco lunar local
+consistente con el DEM. El producto PGDA LOLA de 5 m usa coordenadas polares estereográficas del sur y
+
+Versión 1.0 · 13 noviembre 2026                                                                                                   7
+LUNAR SITE INTELLIGENCE          NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+  referencia MOON_ME asociada a DE421. [2]
+
+  Cadena que hay que validar
+
+● Definir instante UTC y formato temporal SPICE.
+● Cargar kernels necesarios y documentar su versión/fuente.
+● Obtener vector del observador y del cuerpo objetivo en un marco inercial/planetocéntrico adecuado.
+● Transformar el vector al marco fijo lunar y luego al marco topocéntrico local del punto.
+● Derivar azimut y elevación aparente con convención de ejes explícita.
+● Contrastar instantes concretos con JPL Horizons o una referencia independiente.
+
+  El riesgo técnico más importante del proyecto es la coherencia de marcos y coordenadas. No basta con que
+  la gráfica «parezca correcta»: hay que probar el signo, la orientación, la longitud, la latitud, el eje vertical y
+  el instante temporal.
+
+ 3.4 Motor de visibilidad (Visibility Engine)
+
+  Con azimut A y elevación e del cuerpo, la primera aproximación es:
+
+  Visible(t) = [ e(t) > H(A(t)) ]
+
+  La versión mejorada considera el tamaño angular del disco. En el caso del Sol, el centro puede quedar por
+  debajo del horizonte mientras una fracción del disco aún es visible; la métrica puede distinguir disco
+  completamente visible, parcialmente oculto y completamente oculto. La Tierra puede tratarse de forma
+  análoga si el tiempo y el nivel de detalle lo permiten.
+
+ 3.5 Resolución temporal
+
+  La simulación inicial recorrerá el intervalo con pasos de 10 minutos. Cuando el estado cambia de visible a
+  no visible o viceversa, se refina el intervalo con pasos de 1 minuto o búsqueda de raíz temporal. Así se
+  evita gastar tiempo en alta resolución durante todo el periodo, manteniendo una estimación más precisa
+  de los límites de las ventanas.
+
+Figura 3. Perfil polar sintético para explicar la relación entre horizonte, azimut y posición de los cuerpos. No son efemérides ni
+                                                            datos topográficos calculados para Shackleton.
+
+Versión 1.0 · 13 noviembre 2026                                                                                                     8
+LUNAR SITE INTELLIGENCE                                 NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+4. Métricas, comparación e incertidumbre
+
+4.1 Métricas de salida
+
+Indicador                        Definición operativa                                                 Unidad / salida
+Solar Visibility                 Fracción del intervalo con el Sol visible geométricamente.           % del periodo
+Longest Solar Window             Mayor intervalo continuo con visibilidad solar.                      h:min
+Max Darkness                     Mayor tramo continuo sin Sol visible.                                h:min
+Earth Visibility                 Fracción del intervalo con la Tierra visible geométricamente.        % del periodo
+Longest Earth Window             Mayor intervalo continuo con Tierra visible.                         h:min
+Sun–Earth Overlap                Tiempo en el que ambos son visibles a la vez.                        h:min / %
+Terrain Slope                    Pendiente local y/o percentiles dentro del área evaluada.            grados
+Data Confidence                  Calidad del soporte topográfico y sensibilidad del resultado.        cualitativo + métricas
+
+4.2 Separar visibilidad de capacidad operativa
+
+Sol: el resultado de LSI será tiempo de visibilidad geométrica. La potencia real requiere, como mínimo,
+irradiancia, ángulo de incidencia, orientación y eficiencia de paneles, temperatura, polvo, degradación,
+sombras de la propia instalación, almacenamiento y consumo.
+
+Tierra: la visibilidad geométrica es una condición necesaria para una línea de vista directa, pero no
+suficiente para garantizar un enlace RF. Un sistema de comunicaciones real requiere presupuesto de
+enlace, frecuencia, antenas, potencia, orientación, pérdidas, ruido, interferencias, margen y geometría de
+la estación terrestre.
+
+ 4.3 Incertidumbre y confianza
+
+● Usar el raster de incertidumbre vertical y el mapa de conteos para identificar zonas con soporte débil.
+● Si hay clones DEM, repetir el cálculo de horizonte/visibilidad sobre un subconjunto para estimar
+
+     sensibilidad.
+● Informar resultado nominal y rango o dispersión, no solo una cifra puntual.
+● Distinguir incertidumbre topográfica, error de transformación de coordenadas, discretización temporal y
+
+     simplificaciones geométricas.
+● Etiquetar como «sin datos suficientes» los resultados afectados por nodata o cobertura incompleta.
+
+4.4 Motor de decisión explicable
+
+El sistema no impondrá un único ranking universal. Ofrecerá indicadores independientes y un score
+ponderado opcional que el usuario pueda modificar. La puntuación debe enseñar sus componentes, pesos
+y penalizaciones.
+
+Dimensión                        Ejemplos de variables
+
+Solar Availability               % de tiempo con Sol visible; ventana continua máxima; duración de oscuridad.
+
+Communication Availability       % de tiempo con Tierra visible; ventana continua; solapamiento.
+
+Terrain Suitability              Pendiente local; rugosidad si está disponible; entorno inmediato.
+
+Data Confidence                  Conteo LOLA; incertidumbre Z; cobertura y estabilidad entre clones.
+
+Ejemplo de score (configurable, no definitivo): Score = w₁·Solar + w₂·Earth + w₃·Terrain + w₄·Confidence,
+con pesos normalizados y variables escaladas. El usuario debe poder abrir el detalle y entender por qué
+cambia la clasificación.
+
+Versión 1.0 · 13 noviembre 2026                                                                                               9
+LUNAR SITE INTELLIGENCE          NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+Figura 4. Ejemplo de cronograma con bandas sintéticas. La aplicación real generará las ventanas a partir de SPICE, DEM y
+                                                                             horizonte calculado.
+
+Versión 1.0 · 13 noviembre 2026                                                                                           10
+LUNAR SITE INTELLIGENCE          NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+5. Experiencia de usuario y pantallas
+
+La experiencia se diseña alrededor de una pregunta: elegir un lugar y un periodo, entender la geometría y
+comparar el resultado. La representación «both» significa que el mapa 3D y el dashboard son vistas
+coordinadas del mismo estado de simulación.
+
+          Figura 5. Wireframe de la interfaz propuesta. Es un boceto conceptual, no una captura de una aplicación implementada.
+
+ Pantalla A — Lunar Explorer
+
+● Vista 3D del terreno con relieve sombreado y escala legible.
+● Marcadores para los tres sitios candidatos y selección del punto de observación.
+● Controles de altura del observador, orientación y escala.
+● Capas activables: elevación, pendiente, incertidumbre y calidad de muestreo.
+● Panel de coordenadas y metadatos del raster.
+
+ Pantalla B — Horizon & Visibility
+
+● Perfil de horizonte de 360° en coordenadas azimutales.
+● Marcadores del Sol y de la Tierra en el azimut/elevación calculados.
+● Indicador de visibilidad: visible, parcialmente oculto o bloqueado.
+● Control de fecha/hora y avance temporal.
+
+ Pantalla C — Mission Timeline
+
+● Bandas temporales para Sol visible, Tierra visible y coincidencia.
+● Duración de cada ventana y mayor intervalo continuo.
+● Zoom alrededor de transiciones y comparación de fechas.
+● Advertencia visible de que se trata de visibilidad geométrica.
+
+ Pantalla D — Site Comparison
+
+Versión 1.0 · 13 noviembre 2026                                                                                                  11
+LUNAR SITE INTELLIGENCE                                            NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+● Comparativa lado a lado de Site04, Site11 y Site23.
+● Métricas solares, terrestres, terreno y confianza por separado.
+● Pesos ajustables y score opcional transparente.
+● Descarga de resumen CSV/JSON o captura para el informe.
+
+Versión 1.0 · 13 noviembre 2026                                    12
+LUNAR SITE INTELLIGENCE                           NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+6. Arquitectura técnica y stack
+
+      Figura 6. Arquitectura lógica: la interfaz consume resultados del motor científico, pero no contiene cálculos geodésicos ni
+                                                                               decisiones de visibilidad.
+
+Stack recomendado
+
+Capa                             Tecnología       Motivo
+Lenguaje                         Python 3.11      Ecosistema científico y rapidez de prototipado.
+Aplicación web                   Streamlit        MVP rápido, controles y paneles integrados.
+Visualización 3D /               Plotly           Gráficos interactivos y terreno 3D.
+gráficos
+Mapa / capas                     PyDeck           Exploración geoespacial y capas.
+Raster / GIS                     Rasterio + GDAL  GeoTIFF, CRS, ventanas y metadatos.
+Cálculo numérico                 NumPy + SciPy    Vectores, interpolación, optimización y raíces.
+Efemérides                       SpiceyPy         Acceso a SPICE desde Python.
+Datos tabulares                  Pandas           Métricas, tablas y exportación.
+Pruebas                          Pytest           Pruebas unitarias y regresión.
+
+ Principios de arquitectura
+
+● Monolito modular: no usar microservicios ni Kubernetes durante el hackathon.
+● Separación estricta entre datos, cálculo científico, métricas y visualización.
+● Funciones deterministas: una misma entrada debe producir el mismo resultado.
+● Metadatos explícitos para cada DEM, kernel, transformación y simulación.
+● El núcleo científico no depende de la interfaz; debe poder probarse desde Python.
+
+ Estructura del repositorio
+
+Versión 1.0 · 13 noviembre 2026                                                                                                    13
+LUNAR SITE INTELLIGENCE          NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+lunar-site-intelligence/
+
+sss app.py
+
+sss requirements.txt
+
+sss README.md
+
+sss config/
+
+s sss sites.json
+
+s sss simulation.json
+
+sss data/
+
+s sss raw/
+
+s s sss shackleton/
+
+s s sss de_gerlache/
+
+s s sss malapert/
+
+s sss processed/
+
+sss kernels/
+
+s sss README.md
+
+sss src/
+
+s sss data/
+
+s s sss loader.py
+
+s s sss metadata.py
+
+s sss terrain/
+
+s s sss dem.py
+
+s s sss slope.py
+
+s s sss horizon.py
+
+s sss astronomy/
+
+s s sss spice_engine.py
+
+s s sss coordinates.py
+
+s s sss ephemeris.py
+
+s sss simulation/
+
+s s sss visibility.py
+
+s s sss timeline.py
+
+s s sss uncertainty.py
+
+s sss analysis/
+
+s s sss metrics.py
+
+s s sss ranking.py
+
+s sss visualization/
+
+s  sss lunar_map.py
+
+s  sss horizon_chart.py
+
+s  sss timeline_chart.py
+
+s  sss comparison.py
+
+sss tests/
+
+s sss test_coordinates.py
+
+s sss test_horizon.py
+
+s sss test_visibility.py
+
+s sss test_metrics.py
+
+sss docs/
+
+   sss methodology.md
+
+   sss data_sources.md
+
+   sss limitations.md
+
+Dependencias iniciales orientativas
+
+streamlit
+plotly
+pydeck
+rasterio
+numpy
+scipy
+spiceypy
+pandas
+pytest
+pyproj
+
+Las versiones exactas deben fijarse en requirements.txt una vez probado el entorno. GDAL puede requerir
+instalación compatible con el sistema operativo; conviene evitar dedicar el hackathon a resolver conflictos
+de dependencias.
+
+Versión 1.0 · 13 noviembre 2026                                                                              14
+LUNAR SITE INTELLIGENCE                                                  NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+7. Plan de implementación del hackathon
+
+La ventana operativa acordada para el evento es del sábado 14 de noviembre de 2026 a las 09:00 al
+domingo 15 de noviembre a las 23:59, hora de Madrid. Antes de empezar, confirmar el contador y la zona
+horaria que muestre el portal del evento. Respetar la norma del reto sobre no desarrollar anticipadamente
+la solución; antes de la apertura, limitarse a estudiar el problema, preparar el entorno y revisar
+fuentes/datos.
+
+Regla de ejecución
+
+No empezar construyendo todas las pantallas. El primer hito técnico es validar una única coordenada real:
+leer el DEM de Shackleton, convertir el punto al marco lunar correcto, calcular el horizonte y comprobar la
+posición del Sol/Tierra con una referencia independiente.
+
+Secuencia por hitos
+
+Hito                  Entregable verificable                             Criterio de aceptación
+H0 — Datos            DEM Site04 descargado, metadatos y CRS
+                      documentados.                                      Se abre, se recorta y se representa sin perder
+H1 —                  Transformación DEM ↔ marco SPICE validada.         georreferencia.
+Coordenadas
+H2 — Horizonte        Perfil 360° para un punto real.                    Punto y orientación coherentes; comparación
+H3 — Efemérides       Azimut/elevación de Sol y Tierra para instantes.   independiente.
+
+H4 — Visibilidad      Estados visible/no visible y ventanas temporales.  Pruebas sintéticas superadas y perfil estable.
+H5 — UI
+H6 — Entrega          Mapa 3D, horizonte, timeline y comparación.        Convenciones y marcos documentados; chequeo
+                                                                         Horizons.
+                      README, metodología, vídeo/capturas y
+                      submission.                                        Casos de prueba controlados pasan.
+
+                                                                         Demo fluida de extremo a extremo.
+
+                                                                         Reproducible, explicado y enviado antes del cierre.
+
+Distribución de tiempo estimada: 24 horas efectivas
+
+Bloque                           Tiempo  Trabajo
+1. Datos y terreno               4h      Descargar Site04, inspeccionar CRS, recortar, visualizar DEM.
+
+2. Núcleo científico             8h      Horizonte, SPICE, transformaciones, visibilidad y tests.
+
+3. Aplicación                    7h      Mapa 3D, selectores, gráficas, timeline y sitios adicionales.
+
+4. Validación y entrega          5h      Pruebas, incertidumbre básica, README, demo y envío.
+
+Priorización si el tiempo se complica
+
+Nivel                            Funcionalidad
+Must have                        DEM real + mapa 3D; horizonte 360°; Sol SPICE; visibilidad; timeline; comparación básica de tres sitios.
+Should have                      Pendiente; mapa de incertidumbre; Earth visibility; exportación de resultados.
+Stretch                          Clones DEM; disco parcial; refinamiento temporal adaptativo; score ponderado.
+No hacer ahora                   Potencia eléctrica real, RF link budget, IA/agentes, backend distribuido.
+
+Versión 1.0 · 13 noviembre 2026                                                                                               15
+LUNAR SITE INTELLIGENCE                                                                  NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+8. Validación, pruebas y criterios de calidad
+
+La credibilidad del proyecto depende de enseñar que el motor funciona, no solo de la calidad de la interfaz.
+Las pruebas mínimas deben ser rápidas, repetibles y visibles en el repositorio.
+
+Pruebas unitarias obligatorias
+
+Prueba                           Entrada controlada                            Resultado esperado
+Terreno plano                    DEM artificial constante.                     Horizonte cercano a 0° en todas las direcciones.
+Obstáculo artificial             DEM plano con una cresta en un azimut.        Pico de horizonte en el sector de la cresta.
+Cuerpo sobre horizonte           Elevación mayor que H(azimut).                Visible.
+Cuerpo bajo horizonte            Elevación menor que H(azimut).                Oculto.
+Transición temporal              Serie sintética que cruza el horizonte.       Ventana detectada y refinada.
+Coordenadas                      Puntos de control y transformación conocida.  Error dentro de tolerancia definida.
+Nodata                           Hueco en raster / fuera de cobertura.         No se interpreta como una montaña ni como cielo
+                                                                               despejado.
+
+ Validación geodésica y astronómica
+
+● Documentar el CRS del DEM y la referencia lunar asociada.
+● Comprobar convención de azimut (norte/este, sentido horario/antihorario).
+● Comprobar convención de elevación (horizontal = 0°, cenit = +90°).
+● Probar una coordenada conocida y un instante fijo con JPL Horizons.
+● Comprobar que el Sol y la Tierra se mueven de forma continua entre instantes.
+● Repetir una simulación con paso de 10 minutos y con paso de 1 minuto cerca de transiciones.
+
+ Criterios de aceptación del MVP
+
+● La app muestra un recorte de terreno lunar real, con fuente y referencia indicadas.
+● El horizonte de 360° se genera desde un punto que el usuario puede seleccionar.
+● La posición del Sol y de la Tierra está calculada con SPICE, no dibujada manualmente.
+● La visibilidad se decide comparando elevación y horizonte en el azimut correspondiente.
+● La línea temporal muestra ventanas y duración de forma legible.
+● La comparación presenta tres candidatos y separa indicadores de confianza.
+● Las limitaciones se explican sin exagerar el grado de precisión.
+
+Riesgos técnicos principales
+
+Riesgo                           Impacto                                     Mitigación
+
+Error de CRS / marco lunar Crítico: posiciones incorrectas                   Primer hito; pruebas de control; contraste Horizons.
+                                             aunque la UI parezca correcta.
+
+Resolución efectiva del          Alto: falsa precisión del horizonte. Usar LDEC, incertidumbre y advertencia de interpolación.
+DEM
+
+Rendimiento de ray               Medio/alto: cálculo lento.                  Recortes locales, muestreo adaptativo y caché.
+casting
+
+Versión 1.0 · 13 noviembre 2026                                                                                                    16
+LUNAR SITE INTELLIGENCE                                          NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+Riesgo                           Impacto                         Mitigación
+Kernels SPICE                    Alto: efemérides incompletas o  Usar kernels mínimos, versionarlos y documentar.
+                                 incompatibles.
+Nodata / cobertura                                               Máscara de validez y estado «sin datos».
+Alcance excesivo                 Medio: horizonte erróneo.       Congelar MVP y reservar 5 h para cierre.
+
+                                 Crítico para entrega.
+
+Versión 1.0 · 13 noviembre 2026                                                                                    17
+LUNAR SITE INTELLIGENCE                                      NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+9. Guion de demostración y narrativa
+
+La demo debe durar aproximadamente tres minutos y contar una historia clara: no basta con ver una
+montaña lunar; hay que entender si desde un punto concreto se ve el Sol, se ve la Tierra y durante cuánto
+tiempo.
+
+Tiempo     Acción en pantalla                                Mensaje
+0:00–0:25  Abrir Lunar Explorer en Site04 — Shackleton rim.
+0:25–0:55  Rotar el terreno y señalar punto de observación.  Estamos evaluando un emplazamiento real con
+0:55–1:25  Abrir Horizon & Visibility; mostrar Sol/Tierra.   topografía NASA.
+1:25–1:55  Avanzar el tiempo y mostrar el timeline.
+1:55–2:30  Comparar Site04, Site11 y Site23.                 La topografía crea un horizonte distinto en cada
+2:30–3:00  Mostrar incertidumbre y limitaciones.             dirección.
+
+                                                             Las posiciones se calculan con SPICE y se comparan con
+                                                             el horizonte local.
+
+                                                             No importa solo el instante: importan las ventanas y sus
+                                                             duraciones.
+
+                                                             Los candidatos presentan compromisos diferentes.
+
+                                                             El resultado es explicable: muestra calidad de datos y
+                                                             qué no está modelado.
+
+ Frase de cierre sugerida
+
+  «Lunar Site Intelligence transforma topografía y efemérides lunares en una decisión visual
+  y trazable. No entrega una puntuación mágica: permite entender cuándo un lugar ve el Sol,
+  cuándo ve la Tierra y cuánta confianza merece cada resultado».
+
+ Elementos que deben aparecer en el README
+
+● Resumen del problema y de la solución.
+● Instrucciones de instalación y ejecución.
+● Fuentes exactas de DEM, capas auxiliares y kernels.
+● Metodología de transformación de coordenadas y cálculo del horizonte.
+● Definición de métricas y reglas de visibilidad.
+● Limitaciones: visibilidad geométrica ≠ potencia / enlace RF.
+● Capturas de pantalla, vídeo corto y ejemplos de uso.
+● Créditos y referencias científicas.
+
+ Checklist de entrega
+
+● El proyecto arranca desde un entorno limpio.
+● El repositorio no incluye archivos enormes innecesarios; documenta cómo obtenerlos.
+● Los kernels/datos tienen procedencia y licencia/condiciones de uso verificadas.
+● Las capturas muestran datos reales, no solo pantallas de ejemplo.
+● Las figuras sintéticas están claramente identificadas como ilustrativas.
+● El vídeo demuestra un flujo funcional completo.
+● La entrega se envía con margen antes del cierre.
+
+Versión 1.0 · 13 noviembre 2026                                                                            18
+LUNAR SITE INTELLIGENCE                                            NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+10. Limitaciones conocidas y evolución
+posterior
+
+El proyecto es un prototipo de apoyo a decisiones y no un sistema certificado de selección de lugar de
+aterrizaje. El alcance del hackathon debe mantenerse honesto y verificable.
+
+ Limitaciones del MVP
+
+● La geometría se evalúa para un punto de observación y una altura configurada; no representa
+     automáticamente toda una zona de aterrizaje.
+
+● El horizonte depende de la extensión del DEM, su densidad de datos y la calidad de interpolación.
+
+● La primera versión puede aproximar el disco de los cuerpos o usar solo el centro aparente; el nivel de
+     detalle debe declararse.
+
+● El modelo no calcula todavía potencia solar ni enlace RF.
+
+● No se modelan obstáculos construidos, antenas, mástiles, paneles ni estructuras de una futura base.
+
+● La comparación de tres áreas no equivale a una búsqueda exhaustiva de todos los emplazamientos del
+     polo sur.
+
+Roadmap después del hackathon
+
+Fase  Mejora                                                Valor
+
+1     Disco solar/terrestre y visibilidad parcial.          Mejor definición de ventanas cerca del horizonte.
+
+2     Sensibilidad con clones DEM y propagación de          Resultados más robustos y defendibles.
+
+      incertidumbre.
+
+3     Análisis espacial por polígonos y no solo por punto.  Comparar áreas de aterrizaje completas.
+
+4     Modelo de energía solar con orientación de paneles y  Pasar de visibilidad a estimación energética.
+
+      almacenamiento.
+
+5     Presupuesto de enlace RF y geometría de antenas.      Evaluar disponibilidad de comunicaciones operativas.
+
+6     Integración con datos de navegación/terreno y exportación Uso en flujos técnicos de misión.
+
+      GIS.
+
+Principio rector: cada mejora debe añadirse como módulo separado, con entradas y salidas documentadas,
+para no contaminar el núcleo geométrico ya validado.
+
+Versión 1.0 · 13 noviembre 2026                                                                                19
+LUNAR SITE INTELLIGENCE          NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+Anexo A. Pseudocódigo del núcleo
+
+A.1 Horizonte local
+
+for azimuth in azimuth_grid:
+       max_elevation = -90.0
+
+       for distance in range_samples:
+              x, y = project_from_observer(
+                     x0, y0, azimuth, distance
+              )
+
+              z = dem.sample(x, y)
+              if z is NODATA:
+
+                     continue
+
+              elevation_angle = degrees(
+                     atan2(z - observer_height, distance)
+
+              )
+              max_elevation = max(
+
+                     max_elevation, elevation_angle
+              )
+
+       horizon[azimuth] = max_elevation
+
+A.2 Visibilidad por instante
+
+for t in time_grid:
+       sun_vector = spice_position("SUN", t, frame)
+       earth_vector = spice_position("EARTH", t, frame)
+
+       sun_az, sun_el = to_local_az_el(sun_vector, site)
+       earth_az, earth_el = to_local_az_el(earth_vector, site)
+
+       sun_visible = sun_el > horizon_at(sun_az)
+       earth_visible = earth_el > horizon_at(earth_az)
+
+       save_state(
+              t,
+              sun_visible,
+              earth_visible,
+              sun_az, sun_el,
+              earth_az, earth_el
+
+       )
+
+A.3 Métricas temporales
+
+solar_fraction = count(sun_visible) / n_samples
+earth_fraction = count(earth_visible) / n_samples
+overlap_fraction = count(
+
+       sun_visible & earth_visible
+) / n_samples
+
+solar_windows = contiguous_true_intervals(
+       times, sun_visible
+
+)
+earth_windows = contiguous_true_intervals(
+
+       times, earth_visible
+)
+overlap_windows = contiguous_true_intervals(
+
+       times, sun_visible & earth_visible
+)
+
+El pseudocódigo es deliberadamente esquemático. La implementación real debe resolver la transformación
+de coordenadas, la interpolación del DEM, los casos de nodata y el refinamiento de transiciones.
+
+Anexo B. Configuración orientativa
+
+# config/simulation.json
+{
+
+   "time_step_minutes": 10,
+   "refinement_step_minutes": 1,
+   "observer_height_m": 2.0,
+   "horizon_azimuth_step_deg": 1.0,
+   "max_horizon_distance_m": 30000,
+   "bodies": ["SUN", "EARTH"],
+   "visibility_model": "geometric_center",
+   "show_uncertainty": true
+}
+
+Versión 1.0 · 13 noviembre 2026                                                                         20
+LUNAR SITE INTELLIGENCE          NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+Los valores de radio, paso y altura son parámetros iniciales de prototipo, no constantes universales. Deben
+ajustarse a la escala de la zona, el DEM y el uso previsto.
+
+Versión 1.0 · 13 noviembre 2026                                                                              21
+LUNAR SITE INTELLIGENCE          NASA SPACE APPS 2026 · DOCUMENTO TÉCNICO
+
+Referencias y créditos
+
+Fuentes científicas y oficiales consultadas
+
+[1] NASA Space Apps Challenge 2026 — Lunar Landing Site Navigator. Descripción oficial del reto y objetivo de la aplicación.
+https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/
+
+[2] NASA Goddard, Planetary Geology, Geophysics and Geochemistry Laboratory — High-Resolution LOLA Topography for Lunar
+South Pole Sites (PGDA Product 78). Productos LDEM, XYZI, LDEC, slope, incertidumbre y clones; CRS polar estereográfico,
+MOON_ME / DE421.
+https://pgda.gsfc.nasa.gov/products/78
+
+[3] NASA Goddard PGDA — Enhanced Topography Models for Selected Lunar South Pole Regions with Shape-from-Shading (PGDA
+Product 104). SDEM de 5 m/píxel con imágenes LROC NAC y productos auxiliares.
+https://pgda.gsfc.nasa.gov/products/104
+
+[4] NASA NAIF — SPICE Toolkit and ancillary kernels.
+https://naif.jpl.nasa.gov/naif/
+
+[5] NASA/JPL — Horizons System.
+https://ssd.jpl.nasa.gov/horizons/
+
+[6] NASA Scientific Visualization Studio — Visualizing Shackleton Crater. Visualización topográfica y descripción de la geometría del
+cráter; los bordes presentan puntos con iluminación persistente mientras el interior está en sombra permanente.
+https://svs.gsfc.nasa.gov/4716/
+
+[7] NASA — Moon Camera Mosaic Sheds Light on Lunar South Pole. Explica el uso combinado de LROC y ShadowCam para zonas
+iluminadas y sombreadas.
+https://www.nasa.gov/missions/lro/nasa-moon-camera-mosaic-sheds-light-on-lunar-south-pole/
+
+[8] NASA Science — Illumination Map of the Moon’s South Pole. Mapa multitemporal de iluminación con Shackleton en el centro.
+https://science.nasa.gov/resource/illumination-map-of-the-moons-south-pole/
+
+Créditos visuales
+
+Las figuras incluidas en este PDF (portada conceptual, esquema de sitios, arquitectura, geometría del
+horizonte, perfil polar sintético, cronograma sintético y wireframe) se han creado específicamente para
+explicar la propuesta. No son productos cartográficos NASA ni resultados calculados por LSI. La aplicación
+final deberá incorporar capturas y capas reales descargadas de las fuentes indicadas, con sus créditos y
+metadatos.
+
+La visualización de Shackleton de NASA SVS [6] se cita como referencia contextual para la forma del cráter
+y la diferencia entre interior sombreado y bordes iluminados; no se ha reproducido dentro de este
+documento.
+
+LUNAR SITE INTELLIGENCE
+Documento de arquitectura y plan de implementación · Versión 1.0 · 13 noviembre 2026
+Documento de trabajo para preparar la participación en NASA Space Apps Challenge 2026.
+
+Versión 1.0 · 13 noviembre 2026                                                                                                        22
+

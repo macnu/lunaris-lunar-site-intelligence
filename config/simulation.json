@@ -1,0 +1,209 @@
+{
+  "schema_version": "1.0.0",
+  "_nota": "Parámetros por defecto de LSI. Sufijos de unidad en cada clave (_m, _km, _deg, _s, _h, _k, _w_m2); sin sufijo = adimensional. Etiqueta entre corchetes en _etiquetas: [pub]=publicado/fijado por convención, [cal]=a calibrar con experto, [ver]=a verificar, [sup]=suposición de diseño. Fuente de cada bloque en docs/plan/arquitectura.md §8.",
+  "frames": {
+    "frame": "MOON_ME",
+    "abcorr": "LT+S",
+    "moon_radius_m": 1737400.0,
+    "sun_radius_km": 695700.0,
+    "earth_radius_eq_km": 6378.137,
+    "au_km": 149597870.7,
+    "kernels": ["naif0012.tls", "pck00011.tpc", "moon_080317.tf", "moon_assoc_me.tf", "moon_pa_de421_1900-2050.bpc", "de421.bsp"]
+  },
+  "time": {
+    "utc_min": "1900-01-02T00:00:00",
+    "utc_max": "2050-12-30T00:00:00",
+    "default_start_utc": "2026-12-01T00:00:00",
+    "default_period_days": 30
+  },
+  "observer": {
+    "height_m": 2.0,
+    "height_min_m": 0.0,
+    "height_max_m": 100.0,
+    "edge_margin_px": 2
+  },
+  "horizon": {
+    "az_step_deg": 0.25,
+    "radial_step_m": 5.0,
+    "r_min_m": 5.0,
+    "r_max_m": 30000.0,
+    "block_azimuths": 120,
+    "curvature": "exact",
+    "compute_upper_bound": true,
+    "z_up_m": null,
+    "conservative_bias_deg": 0.0,
+    "near_field_conservative_r_min_m": 15.0
+  },
+  "visibility": {
+    "n_slices": 64,
+    "eps": 0.001,
+    "sun_f_thr": 0.001,
+    "earth_f_thr": 0.5,
+    "limb_darkening_u": 0.0,
+    "limb_darkening_u_if_enabled": 0.6
+  },
+  "timeline": {
+    "step_s": 600.0,
+    "refine_xtol_s": 1.0,
+    "merge_tol_s": 1.0,
+    "countdown_search_days": 45.0,
+    "max_step_s": 840.0,
+    "refine_method": "vectorized_bisection"
+  },
+  "terrain": {
+    "slope_baseline_m": 10.0,
+    "footprint_radius_m": 50.0,
+    "slope_percentile": 90.0,
+    "roughness_radius_m": 50.0,
+    "dem_confidence": {
+      "radius_m": 100.0,
+      "g90_high_m": 15.0,
+      "e90_high_m": 0.6,
+      "g90_medium_m": 25.0,
+      "e90_medium_m": 1.0,
+      "dc_g90_lo_m": 10.0,
+      "dc_g90_hi_m": 40.0,
+      "dc_e90_lo_m": 0.4,
+      "dc_e90_hi_m": 1.5,
+      "support_radius_m": 2000.0,
+      "open_azimuth_downgrade_fraction": 0.10
+    },
+    "effective_resolution_m": 30.0
+  },
+  "uncertainty": {
+    "k_sigma": 1.0,
+    "alt_az_step_deg": 0.5,
+    "observer_height_delta_m": 0.0,
+    "sensitivity_dem_degraded_m": 20.0,
+    "clones_enabled": false
+  },
+  "power": {
+    "solar_constant_w_m2": 1361.0,
+    "iam": {"model": "fresnel_1_interface", "n_coverglass_default": 1.526, "prefer_panel_n": true},
+    "thermal": {"t_ambient_k": 100.0, "t_min_valid_k": 173.15, "eta_ref_for_balance": 0.30, "t_ambient_range_k": [40.0, 200.0], "t_ambient_note": "[sup] nominal 100 K a verificar (sin fuente primaria del IR del regolito iluminado a Sol rasante); 40 K = trampa fria (Paige et al. 2010, Science 330, 479); 200 K = tope de temperaturas maximas polares iluminadas (Fisher et al. 2017, Icarus)"},
+    "eta_rel": {"eta_max_fallback": 1.35, "prefer_panel_cold_gain_cap": true},
+    "degradation": 0.0,
+    "dust_loss": 0.0,
+    "f_shadow": 1.0,
+    "useful_power_fraction_default": 0.25,
+    "energy": {"use_event_nodes": true, "grid_step_s": 600.0, "fine_grid_step_s": 60.0},
+    "battery": {"soc0": 0.5, "soc_min": 0.2, "soc_max": 1.0, "eta_charge": 0.95, "eta_discharge": 0.95, "capacity_wh": null, "load_w": null, "p_nominal_w": null}
+  },
+  "score": {
+    "f0": 0.20,
+    "f1": 0.90,
+    "d_half_h": 48.0,
+    "sigma0_deg": 5.0,
+    "sigma1_deg": 15.0,
+    "eps_s": 0.01,
+    "saturation": {
+      "_nota": "Anidado a propósito: catalog.score_params (mapas de idoneidad, UI) ignora este bloque hasta que suitability_map.window_scores replique la fórmula; el pipeline lo lee con site_score.params_from_config.",
+      "earth_floor": 0.25,
+      "resolution_weight": 0.25,
+      "_nota_earth_floor": "[sup] s_earth = min(1, f_E / max(f_E,ref, earth_floor)): evita que f_E = f_E,ref = 0,08 puntúe 1 (la esfera lisa tampoco ve la Tierra). 0,25 = fracción de ventana con Tierra que se considera comunicación plena; con ref >= 0,25 (~0,5 en el polo) nada cambia. Por perfil: dte_comms 0,5.",
+      "_nota_resolution_weight": "[sup] S = 100*A^(1-L)*Q^L; A = media geométrica de s_i (saturan en su umbral), Q = media geométrica de indicadores sin saturar (f_sol bruta, s_noche, s_Tierra, 1 - pendiente/sigma1); L = resolution_weight. 0 = score antiguo. Evita decenas de sitios en 100 en ventanas cortas."
+    },
+    "gates": {
+      "g1_min_sun_fraction": 0.05,
+      "g2_max_slope_deg": 20.0,
+      "g2_use_profile_design_slope": true,
+      "g3_max_unknown_fraction": 0.5,
+      "g4_use_profile_hard_dark_h": true,
+      "g5_min_duty": 0.5,
+      "g5_type": "soft"
+    },
+    "window": {
+      "_nota": "revision-espacial §6 [conv]: el score y las puertas se evalúan sobre [inicio, inicio + mission_days]; rejilla de fechas de inicio y nº de ventanas alternativas.",
+      "start_step_h": 24,
+      "top_n_windows": 3,
+      "arrival_gate": {"needs_sun": true, "needs_earth": false}
+    },
+    "status_rules": {
+      "_nota": "[conv] el estado (APTO/CONDICIONAL/NO APTO/SIN DATOS) lo deciden las puertas y los escenarios, no la nota. Sin umbral de score.",
+      "decide_by": "gates_and_scenarios",
+      "min_feasible_start_fraction": 0.10,
+      "partial_mode": {"hard_fail_on_sphere": "NO_APTO_PROVISIONAL", "all_pass_on_sphere": "SIN_DATOS"}
+    },
+    "confidence": {
+      "conf_range_scale": 25.0, "high": 0.75, "medium": 0.5,
+      "sigma_h": {
+        "_nota": "revision-geologica §2: c_sup = min(c_gap, c_err, c_hz); c_hz = clip((hi - σh90)/(hi - lo)); σh90 = p90 de |H(z+toterr) - H(z-toterr)|/2 con la rejilla gruesa de la calibración. hi = 0,5° ≈ diámetro solar (a verificar).",
+        "az_step_deg": 1.0, "radial_step_m": 10.0, "far_step_m": 80.0, "k_sigma": 1.0, "hi_deg": 0.5, "lo_deg": 0.1
+      }
+    },
+    "energy": {
+      "_nota": "[sup] T39/RF-33: con panel elegido, s_sol usa la energía efectiva = (1-w)*P_rel medio + w*duty útil sobre la ventana de misión (duty = fracción con P_rel >= min_useful_power_fraction del perfil). w = power_duty_weight. Sin panel: Sol geométrico, y se dice. G5 (duty útil) se evalúa solo con panel: min_duty/type por defecto y por perfil (base_isru dura).",
+      "power_duty_weight": 0.5
+    },
+    "link": {
+      "_nota": "Enlace DTE (conectividad = Tierra visible desde el lander con margen de elevación Y una estación de la red viendo la Luna). [sup] min_earth_elevation_deg 0 (revision-espacial/panels.json: dte_comms 0°, estimado; margen de 3° suposición): sensibilidad 3° y 5° en docs/science/luna-spice-sitios.md. [sup] G7 max_gap_h por perfil (soft salvo decisión del usuario): un lander sin RHU opera ≤ 14 d y dos días sin contacto impiden comandar o recuperar un fallo (48 h); un rover se opera en ciclos diarios (24 h); una base necesita contacto casi continuo (12 h; en la práctica vía relé); con RHU el lander sobrevive sin contactar (96 h); DTE puro 24 h. Ninguno está publicado: son umbrales de diseño editables. La ventana mínima útil (G6, 2 h/8 h) vive en panels.json (suposición).",
+      "default_network": "DSN",
+      "default_direction": "receive",
+      "_nota_direction": "[pub] link_direction por defecto 'receive': elevación mínima de recepción de cada estación (DSN 6,0°). 'transmit' usa 10,1° (810-005/301 Rev. P §2.2.1) y 'both' la intersección: ver config/ground_stations.json: link_directions. La red cubre ~99,9 % en recepción y ~98,0 % en transmisión (dic-2026).",
+      "continuity": {
+        "_nota": "[sup] Continuidad ABSOLUTA del enlace en s_earth (revision-enlace B1): s_earth = min(1, f/max(f_ref, suelo)) · 2^(-hueco_max/(k·hueco_tolerado_perfil)) · min(1, 24·f/min_horas_dia_perfil). La parte relativa satura contra la esfera lisa de la ventana (62 % con 127 h de hueco puntuaba igual que 100 % sin huecos); la absoluta no. Forma: misma familia que s_night = 2^(-D/d_half) (interrupción continua; 1 sin hueco, 1/2 con hueco = k·tolerado, estrictamente decreciente y continua). Producto = no compensatorio. k = 0 desactiva el factor (score antiguo). El hueco tolerado es G7 (max_gap_h) y el contacto mínimo por día es la ventana útil G6 de panels.json (2 h; base 8 h): ninguno está publicado.",
+        "gap_half_factor": 1.0
+      },
+      "sensitivity_min_earth_elevation_deg": [0.0, 3.0, 5.0],
+      "station_config": "config/ground_stations.json"
+    },
+    "no_terrain_policy": "partial_renormalized_flagged",
+    "profiles": {
+      "lander_solar_no_rhu": {"label": "Lander solar (sin RHU)", "weights": {"sun": 0.40, "night": 0.25, "earth": 0.15, "terrain": 0.20}, "uses_solar_gate": true, "mission_days": 14, "link": {"min_earth_elevation_deg": 0.0, "max_gap_h": 48, "max_gap_type": "soft", "min_hours_per_day": 2, "confidence": "suposicion"}},
+      "lander_with_batteries": {"label": "Lander con baterías", "weights": {"sun": 0.40, "night": 0.25, "earth": 0.15, "terrain": 0.20}, "uses_solar_gate": true, "mission_days": 30, "nota": "reutiliza pesos de lander_solar_no_rhu (suposición)", "link": {"min_earth_elevation_deg": 0.0, "max_gap_h": 48, "max_gap_type": "soft", "min_hours_per_day": 2, "confidence": "suposicion"}},
+      "lander_rhu": {"label": "Lander con RHU (clase Chang'e-4)", "weights": {"sun": 0.40, "night": 0.10, "earth": 0.25, "terrain": 0.25}, "uses_solar_gate": true, "mission_days": 90, "mission_profile_id": "lander_solar_no_rhu", "g4": {"na": true}, "nota": "[sup] RHU: sin límite de noche; pendiente y ventana de Tierra heredadas del lander. Pesos y 90 d: suposición (Chang'e-4, Yutu-2 diseñado a 3 meses)", "link": {"min_earth_elevation_deg": 0.0, "max_gap_h": 96, "max_gap_type": "soft", "min_hours_per_day": 2, "confidence": "suposicion"}},
+      "rover": {"label": "Rover", "weights": {"sun": 0.30, "night": 0.15, "earth": 0.15, "terrain": 0.40}, "uses_solar_gate": true, "mission_days": 100, "g4": {"max_dark_h": 50, "type": "soft"}, "nota": "G4 = 50 h BLANDA (VIPER: ~50 h en modo mínimo, NASA NTRS 20220008301); anula el 12 h duro de panels.json", "link": {"min_earth_elevation_deg": 0.0, "max_gap_h": 24, "max_gap_type": "soft", "min_hours_per_day": 2, "confidence": "suposicion"}},
+      "base_isru": {"label": "Base / ISRU", "weights": {"sun": 0.40, "night": 0.25, "earth": 0.15, "terrain": 0.20}, "uses_solar_gate": true, "mission_days": 365, "g5": {"min_duty": 0.75, "type": "hard"}, "nota": "reutiliza pesos de lander_solar_no_rhu (suposición); G5 dura 0,75 (revision-espacial §3, suposición)", "link": {"min_earth_elevation_deg": 0.0, "max_gap_h": 12, "max_gap_type": "soft", "min_hours_per_day": 8, "confidence": "suposicion"}},
+      "dte_comms": {"label": "Comunicaciones (DTE)", "weights": {"sun": 0.15, "night": 0.10, "earth": 0.60, "terrain": 0.15}, "uses_solar_gate": false, "mission_days": 365, "earth_floor": 0.5, "link": {"min_earth_elevation_deg": 0.0, "max_gap_h": 24, "max_gap_type": "soft", "min_hours_per_day": 2, "confidence": "suposicion"}},
+      "custom": {"label": "Personalizado", "weights": {"sun": 0.25, "night": 0.25, "earth": 0.25, "terrain": 0.25}, "uses_solar_gate": true}
+    }
+  },
+  "snap": {
+    "_nota": "[sup] snap 'best' limitado al entorno del rasgo: el mejor punto del mapa con distancia al centro <= radio*radius_factor + margin_km (radio = diametro/2 del gazetteer; sitios curados sin diametro: default_radius_km o site_radius_km). Sin ninguno dentro, el punto cubierto mas cercano con aviso. Antes elegia el TOP-1 de todo el DEM (Shackleton: a 16 km del centro, ~5,5 km fuera del borde). site_radius_km = diametro/2 del gazetteer USGS/IAU (Shackleton 20,92 km, de Gerlache 32,71 km).",
+    "radius_factor": 1.15,
+    "margin_km": 1.0,
+    "default_radius_km": 10.0,
+    "site_radius_km": {"site04": 10.46, "site11": 16.35}
+  },
+  "dem_default_observers": {
+    "_nota": "Las coordenadas curadas de sites.json de Site04 y Site11 caen FUERA de su recorte DEM (calculado 14/11/2026). Marcador: centro del recorte; el usuario elige el punto. Calculado con la proyección de matematica.md §1.",
+    "Site04": {"lat_deg": -89.766811, "lon_deg_e": 188.130102, "note": "centro del recorte Shackleton (pared interna): marcador, no cresta"},
+    "Site11": {"lat_deg": -88.683418, "lon_deg_e": 292.067900, "note": "centro del recorte de Gerlache: marcador"},
+    "Site23": {"lat_deg": -85.994785, "lon_deg_e": 359.764216, "note": "centro del recorte Malapert (21x21 km): marcador"}
+  },
+  "gazetteer": {
+    "source_name": "USGS Gazetteer of Planetary Nomenclature (IAU WGSN), Moon",
+    "processed_path": "data/processed/gazetteer.parquet",
+    "fallback_csv_path": "data/processed/gazetteer.csv",
+    "fuzzy_cutoff": 0.62,
+    "default_limit": 50,
+    "regions": {"polo_sur": [-90.0, -80.0], "sur": [-80.0, -30.0], "ecuatorial": [-30.0, 30.0], "norte": [30.0, 80.0], "polo_norte": [80.0, 90.0]},
+    "dem_cover_margin_m": 10.0
+  },
+  "performance": {
+    "budget_horizon_s": 2.0,
+    "budget_30d_10min_s": 3.0,
+    "budget_1y_10min_s": 20.0,
+    "numba": "optional_not_required"
+  },
+  "cache": {
+    "dir": "data/processed",
+    "horizons_subdir": "horizons",
+    "max_bytes": 524288000,
+    "coord_round_m": 0.01
+  },
+  "export": {
+    "schema_version": "1.0.0",
+    "float_decimals": {"angles_deg": 4, "time_s": 1, "fraction": 5, "power_rel": 5}
+  },
+  "_etiquetas": {
+    "horizon": "[pub] 5 m y 0.25° medidos en matematica.md §2.5; r_min_m 5 por defecto (tests H7), 15 = opción conservadora de terreno-geologia.md [ver]",
+    "visibility": "[pub] n=64 y eps=1e-3 de matematica.md §4; earth_f_thr [cal]",
+    "timeline": "[pub] 600 s y xtol 1 s de matematica.md §5",
+    "terrain": "[cal] umbrales de terreno-geologia.md §2.3",
+    "power": "[ver] n_coverglass 1.526 (panels.json da 1.46 por panel y prevalece); t_ambient [ver]; eta_max_fallback [cal]",
+    "score": "[cal] todo lo de score pendiente de experto; pesos de lander_with_batteries/base_isru [sup]; score.link.continuity (k, mínimo de horas por día) [sup]",
+    "dem_default_observers": "[sup] marcadores, no puntos óptimos",
+    "gazetteer": "[ver] cutoff de coincidencia aproximada [sup]"
+  }
+}

@@ -1,0 +1,85 @@
+{
+ "_nota": "SHA-256 de lo descargado y verificado el 14/11/2026. Regenerar solo de forma consciente: scripts/data_manifest.py --regenerate",
+ "files": {
+  "data/raw/shackleton/Site04_final_adj_5mpp_ldec.tif": {
+   "bytes": 40980740,
+   "sha256": "fcc8c2219ae2368d5b2a1f6aec05fcf96cf725f3035ac8d80efc312a4ff29227"
+  },
+  "data/raw/shackleton/Site04_final_adj_5mpp_slp.tif": {
+   "bytes": 40980772,
+   "sha256": "ec3cfa184b114d95aff498e7452764a8569737ae829e7ff3efd38d5187182579"
+  },
+  "data/raw/shackleton/Site04_final_adj_5mpp_surf.tif": {
+   "bytes": 40980806,
+   "sha256": "38ff70dbdf2f066c2cfa94a646c3a59d653ce7f6b4528b15fc1b43ee397ce758"
+  },
+  "data/raw/shackleton/Site04_final_adj_5mpp_toterr.tif": {
+   "bytes": 40980808,
+   "sha256": "416c4baa3b64def0182bb3379a1a9228482efd8ce32a39309ea8de5d0330fbe6"
+  },
+  "data/raw/de_gerlache/Site11_final_adj_5mpp_ldec.tif": {
+   "bytes": 40980742,
+   "sha256": "aa779cddc7948809d0053ae855ab09a3e1321ac1289223aa68080f89a0d4dbff"
+  },
+  "data/raw/de_gerlache/Site11_final_adj_5mpp_slp.tif": {
+   "bytes": 40980774,
+   "sha256": "c7f3eca389cf323e276955ed8e77b3eb870c576f4adf6b481014a1de6a403e23"
+  },
+  "data/raw/de_gerlache/Site11_final_adj_5mpp_surf.tif": {
+   "bytes": 40980806,
+   "sha256": "58f3372c35bbd6baf38ffd5633c1c96b59bd89dbd252150581d12893a43136e5"
+  },
+  "data/raw/de_gerlache/Site11_final_adj_5mpp_toterr.tif": {
+   "bytes": 40980810,
+   "sha256": "0d61e972981483fb3022af8e65d052506969a758aa95eb0ebe0478a83ac55e1b"
+  },
+  "data/raw/malapert/Site23_final_adj_5mpp_ldec.tif": {
+   "bytes": 70586742,
+   "sha256": "ebb6adb3603f3921fcce9c8bfd06fb79ca5fd88b53f11ab4c65f0da158316c74"
+  },
+  "data/raw/malapert/Site23_final_adj_5mpp_slp.tif": {
+   "bytes": 70586810,
+   "sha256": "e2b41c65a9c9044d359f634e706b71fa187dbe7d9f271d5410cbd81d68eadb91"
+  },
+  "data/raw/malapert/Site23_final_adj_5mpp_surf.tif": {
+   "bytes": 70586804,
+   "sha256": "12d280a59cd7580415f6bada638d0abe025ce6727541fddf68d5dc371a6c94cf"
+  },
+  "data/raw/malapert/Site23_final_adj_5mpp_toterr.tif": {
+   "bytes": 70586811,
+   "sha256": "fe08539cfa3a0f7bb4ddf15dd7e0835fae0c761d516b2157d51116311a1ff69d"
+  },
+  "data/raw/lola80s/LDEM_80S_80MPP_ADJ.TIF": {
+   "bytes": 189158392,
+   "sha256": "82030dcbdd7c4bb0c7d858e9b4b293b9f2cda5a543ba31ec0f42784bd6beee5a"
+  },
+  "kernels/naif0012.tls": {
+   "bytes": 5257,
+   "sha256": "678e32bdb5a744117a467cd9601cd6b373f0e9bc9bbde1371d5eee39600a039b"
+  },
+  "kernels/pck00011.tpc": {
+   "bytes": 131226,
+   "sha256": "3dff7b1dbeceaa01f25467767d3fa25816051c85d162d1edf04acb310ee28bb1"
+  },
+  "kernels/moon_080317.tf": {
+   "bytes": 21437,
+   "sha256": "78732477b96f9863e7b0d65bcee3c22b8707ca5ed0db56d1173319cb2e8c7993"
+  },
+  "kernels/moon_assoc_me.tf": {
+   "bytes": 8468,
+   "sha256": "52c622043ce0447d575e59ee01642f1894921e68c10f934ceff065f362da6c1c"
+  },
+  "kernels/moon_pa_de421_1900-2050.bpc": {
+   "bytes": 1770496,
+   "sha256": "656f90616403d75a75f0cd6c8830fc5b44f8cb4facb5ccb8915e752b397520cf"
+  },
+  "kernels/de421.bsp": {
+   "bytes": 16790528,
+   "sha256": "08b20db2ae22488650641c5a9033e5bfda4b1c4b440cfeaf20f621cfa18ecdb3"
+  },
+  "gazetteer/MOON_nomenclature_center_pts.zip": {
+   "bytes": 23845070,
+   "sha256": "bcb1a37a195babb159ee1f720a6c64d03842de87d10a7ba7d754f8873477606b"
+  }
+ }
+}

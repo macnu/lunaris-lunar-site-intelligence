@@ -1,0 +1,21 @@
+data/raw/
+data/processed/
+kernels/*
+!kernels/README.md
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+*.part
+
+# Residuos de trabajo y artefactos regenerables
+*.npy
+fine_*.json
+.coverage
+coverage.xml
+htmlcov/
+data/validation_raw/
+.venv-test/
+
+# Expediente del juicio del jurado (local)
+.jurado/

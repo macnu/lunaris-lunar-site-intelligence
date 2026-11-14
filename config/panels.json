@@ -1,0 +1,1588 @@
+{
+  "schema_version": "1.1.0",
+  "updated": "2026-11-14",
+  "language": "es",
+  "doc": "docs/science/paneles-y-misiones.md (esquema, física y límites del modelo)",
+  "confidence_levels": {
+    "publicado": "dato en datasheet del fabricante, paper o nota oficial de agencia/empresa, leído en la fuente",
+    "estimado": "derivado por cálculo a partir de datos publicados (la derivación se indica)",
+    "suposicion": "parámetro de diseño de LSI sin fuente; configurable y marcado como tal en la UI",
+    "a_verificar": "recuerdo o fuente secundaria; NO usar como cifra firme hasta confirmar",
+    "_evidence": "El campo 'confidence' conserva el vocabulario de 4 niveles (la UI lo usa). Mapeo desde 'evidence': datasheet|paper -> publicado; derivado -> estimado; investigacion con rango propuesto -> suposicion; no_disponible o fuente secundaria sin leer -> a_verificar."
+  },
+  "reference": {
+    "solar_constant_W_m2": {
+      "value": 1361,
+      "confidence": "publicado",
+      "note": "TSI a 1 UA; escalar por (1 UA / d_sol)^2 con la distancia Luna-Sol de SPICE. Datasheets: AM0 135.3 mW/cm2 (Spectrolab, Rocket Lab, Azur 1353), 1367 W/m2 (Azur), 136.7 mW/cm2 (Sharp), 1350 W/m2 (Joule 2020)."
+    },
+    "cell_ref_temperature_C": {
+      "value": 28,
+      "confidence": "publicado",
+      "note": "condición de medida AM0 28 C en datasheets Spectrolab (p.1), Azur (p.2), Rocket Lab Z4J/Z4J+/IMM-alfa (p.2); Sharp Si mide a 25 C con 136.7 mW/cm2 (p.1)."
+    },
+    "regolith_bond_albedo": {
+      "value": 0.11,
+      "confidence": "a_verificar",
+      "note": "NSSDC Moon Fact Sheet (Bond 0.11, geométrico 0.12). Solo para término opcional de luz reflejada en paneles verticales; no modelado por defecto."
+    },
+    "sun_angular_diameter_deg": {
+      "value": 0.53,
+      "confidence": "estimado",
+      "note": "~0.53 grados a 1 UA; relevante cuando el centro del Sol esta a <0.27 grados del horizonte (disco parcial)"
+    },
+    "areal_power_formula": {
+      "value": "areal_power_w_m2_am0 = eta_bol_default * 1361 W/m2",
+      "confidence": "estimado",
+      "note": "Potencia eléctrica por área de CELDA/CIC en AM0 a 1 UA y T de referencia del datasheet. No incluye factor de empaquetado, cableado ni estructura (array típico: ~330 W/m2 rígido, ~338 W/m2 flexible, JPL D-101316 PDF p.33-34). Los datasheets miden con 1353/1367 W/m2: usar 1361 cambia <0.6 %."
+    }
+  },
+  "mounting_modes": {
+    "horizontal": "normal del panel = cenit local. cos(theta) = sin(h). Caso por defecto de cubierta de lander y de rover.",
+    "tilted": "inclinacion beta respecto a la horizontal y azimut fijo Az_p. cos(theta) = sin(h)cos(beta) + cos(h)sin(beta)cos(Az_s - Az_p), recortado a >= 0.",
+    "vertical_fixed": "beta = 90 grados, azimut fijo (paneles laterales de lander; uno o dos lados opuestos). cos(theta) = cos(h)cos(Az_s - Az_p), recortado a >= 0.",
+    "vertical_az_tracking": "beta = 90 grados con seguimiento azimutal perfecto (Az_p = Az_s). cos(theta) = cos(h). Cota superior ideal; el seguimiento real (mastil, cardan) es a verificar."
+  },
+  "model_defaults": {
+    "power_relative_formula": "P_rel = IAM(theta) * max(cos(theta),0) * (S(d)/S_ref) * f_T(T_panel) * f_rad * f_dust * f_shadow * f_earth_occ",
+    "f_T": {
+      "form": "f_T = 1 + k * (T_panel - T_ref), k en 1/K (coeficiente de potencia del panel), solo valido en valid_range_C",
+      "cold_gain_cap": {
+        "value": 1.15,
+        "confidence": "suposicion",
+        "note": "Por debajo de ~-50 C el coeficiente lineal sobreestima la ganancia (los coeficientes se miden 15..125 C). Azur publica 33.5 % BOL a -150 C pero en condiciones de baja intensidad (LILT, ~3.7 % AM0) para 3G LILT: no extrapolable a otras celulas. Tope conservador +15 %; revisar con datos LILT del fabricante."
+      }
+    },
+    "f_rad_default": {
+      "value": 1.0,
+      "confidence": "suposicion",
+      "note": "Mision de superficie de ~1 dia lunar a meses: fluencia 1 MeV equivalente despreciable frente a 1E14 e/cm2 (que da 0.94 en XTJ Prime). Usar el valor por celula de radiation_retention_ref para misiones largas."
+    },
+    "f_dust_default": {
+      "value": 1.0,
+      "confidence": "suposicion",
+      "note": "No existe cifra publicada fiable de perdida de potencia por polvo para paneles lunares (ver docs). Se expone como parametro y deslizador de sensibilidad; rango ilustrativo 0.7..1.0 NO respaldado por fuente."
+    },
+    "thermal_model": "balance estacionario: (alpha - eta_elec) * G_poa = sigma * T^4 * (eps_front + eps_back); sumideros a 3 K; sin intercambio IR con regolito ni conduccion (limitacion declarada). Da una cota inferior de T para paneles casi horizontales y una buena estimacion para verticales iluminados."
+  },
+  "panels": [
+    {
+      "id": "tj-gaas-lander-body",
+      "name": "GaAs triple union (InGaP/GaAs/Ge) - paneles de lander CLPS",
+      "cell_technology": "InGaP/GaAs/Ge, 3 uniones, sustrato Ge, vidrio de cubierta ~100 um",
+      "description": "Tecnologia estandar de espacio profundo y de los landers comerciales actuales: paneles en cubierta superior y laterales del cuerpo.",
+      "mounting_default": "horizontal",
+      "mounting_allowed": [
+        "horizontal",
+        "tilted",
+        "vertical_fixed"
+      ],
+      "efficiency_bol_pct": {
+        "min": 29.1,
+        "max": 30.7,
+        "default": 29.5,
+        "evidence": "datasheet",
+        "basis": "Default = 3G30C-Advanced bare cell, AM0 1353 W/m2, 28 C: 29.5 % (Azur DB 00010893-02 p.2; CIC 29.1 %; a 1367 W/m2: 29.2/28.8 %). Máx = Spectrolab XTJ Prime 30.7 % AM0 135.3 mW/cm2, 28 C, promedio de >100 000 células (p.1).",
+        "source": [
+          "D2",
+          "D1"
+        ],
+        "confidence": "publicado"
+      },
+      "temp_coeff_pmax_pct_per_K": {
+        "value": -0.23,
+        "valid_range_C": [
+          15,
+          125
+        ],
+        "evidence": "derivado",
+        "derivation": "dP/dT = Vmp'*Jmp + Jmp'*Vmp. XTJ Prime BOL (D1 p.2, 15-125 C): (-6.3 mV/K x 17.5 mA/cm2 + 5.0 uA/cm2/K x 2.406 V)/42.1 mW/cm2 = -0.233 %/K (Jmp' = 5.0 uA/cm2/K por magnitud; la unidad del PDF sale corrupta). Azur 3G30C 6x12 BOL (D2 p.2, 28-140 C): (-6.7 mV/K x 1185 mA + 0.57 mA/K x 2.4 V)/2844 mW = -0.231 %/K. Contraste: JPL D-101316 (PDF p.30) lista -0.23 % (3G30C) y -0.22 % (XTJ Prime).",
+        "source": [
+          "D1",
+          "D2",
+          "D7"
+        ],
+        "confidence": "estimado"
+      },
+      "ref_temperature_C": 28,
+      "thermal": {
+        "absorptivity_front": {
+          "value": 0.91,
+          "evidence": "datasheet",
+          "confidence": "publicado",
+          "note": "Azur 3G30A CIC con coverglass AR 100 um: 'Threshold Absorptivity ≤ 0.91' (D2 p.2). JPL D-101316 PDF p.30: XTJ Prime 0.88, ZTJ 0.92.",
+          "source": [
+            "D2",
+            "D7"
+          ]
+        },
+        "emissivity_front": {
+          "value": 0.85,
+          "confidence": "a_verificar",
+          "note": "no_disponible: ningún datasheet leído da ε. Típico de vidrio con cerio; pedir al fabricante."
+        },
+        "emissivity_back": {
+          "value": 0.8,
+          "confidence": "a_verificar",
+          "note": "depende del sustrato (panel rigido/honeycomb)"
+        }
+      },
+      "mass_and_specific_power": {
+        "cell_mass_mg_cm2": {
+          "min": 50,
+          "max": 86,
+          "evidence": "datasheet",
+          "confidence": "publicado",
+          "note": "XTJ Prime 50-84 mg/cm2 (D1 p.1); Azur 3G30C bare ≤86 mg/cm2, CIC ≤123 mg/cm2 (D2 p.2)"
+        },
+        "cell_level_specific_power_W_kg": {
+          "min": 320,
+          "max": 831,
+          "evidence": "derivado",
+          "confidence": "estimado",
+          "note": "η x 135.3 mW/cm2 / masa: XTJ Prime 41.5 mW/cm2 / 50-84 = 495-831; Azur bare 39.9/86 = 464; Azur CIC 39.4/123 = 320. Solo celda/CIC."
+        },
+        "array_level_typical": {
+          "rigid_W_kg": 80,
+          "flexible_W_kg": [
+            100,
+            175
+          ],
+          "rigid_areal_W_m2": 330,
+          "flexible_areal_W_m2": 338,
+          "evidence": "paper",
+          "confidence": "publicado",
+          "note": "JPL D-101316 PDF p.33-34: valores típicos de array espacial de estado de la práctica (no de un panel de lander concreto)"
+        }
+      },
+      "degradation_defaults": {
+        "radiation_retention_ref": {
+          "fluence_1MeV_e_cm2": "1E14",
+          "pmp_remaining": 0.94,
+          "evidence": "datasheet",
+          "confidence": "publicado",
+          "note": "XTJ Prime AIAA S-111 (D1 p.1). 1E15: 0.85 (AIAA) / 0.87 (ECSS). Azur 3G30 cell 1E15: 26.2/29.5 = 0.888 (D2 p.2)."
+        },
+        "radiation_factor": 1.0,
+        "dust_factor": 1.0,
+        "note": "Valores por defecto = BOL sin polvo; ver model_defaults."
+      },
+      "iam": {
+        "model": "fresnel_1_interface",
+        "coverglass_refractive_index": {
+          "value": 1.46,
+          "confidence": "estimado",
+          "note": "silice fundida; AR-coating no caracterizado"
+        },
+        "note": "MODELO USADO POR EL CODIGO = el de este campo (fresnel_1_interface, normalizado a T(0)); antes decia cosine_only mientras el codigo forzaba Fresnel. En paneles horizontales a h<3 grados el angulo de incidencia es >87 grados: la ley del coseno es una cota SUPERIOR; el IAM real (Fresnel + AR) la reduce. La banda de potencia compara Fresnel, solo-coseno, n=1.40..1.60 [sup] y ASHRAE b0=0.05 [a verificar] (panels.power_band_detail). Parametro b0 de IAM: a verificar."
+      },
+      "missions": [
+        {
+          "name": "IM-1 Odysseus (Intuitive Machines, Nova-C)",
+          "role": "3 paneles: cubierta superior + 2 de cuerpo; '200 W máximo en superficie'",
+          "confidence": "a_verificar",
+          "note": "Cifra solo en Wikipedia (secundaria). El press kit NASA IM-1 se leyó (D18) y NO da potencia ni celda; solo menciona un panel solar en la cubierta superior (p.12). FCC filing con celdas Spectrolab: no releído en esta pasada."
+        },
+        {
+          "name": "IM-2 Athena (Intuitive Machines, Nova-C)",
+          "role": "misma plataforma Nova-C",
+          "confidence": "estimado",
+          "note": "Planificada ~10 d. Aterrizo el 06/03/2025 de costado (~250 m del objetivo, en un crater) y la mision se declaro terminada en menos de un dia (spacepolicyonline.com/news/im-2-mission-ends-one-day-after-lunar-landing/; astronomy.com). La cifra '~24 h de energia' queda a verificar."
+        },
+        {
+          "name": "Blue Ghost M1 (Firefly)",
+          "role": "paneles SolAero by Rocket Lab: 2 laterales + 1 de cubierta; 400 W y 1470 h de generación",
+          "confidence": "publicado",
+          "note": "Leído en la página de Firefly (D16) y en la nota de Rocket Lab (D17). Ninguna dice qué celda (ZTJ/Z4J/otra): a verificar. Aterrizó 02/03/2025; apagada al ocaso 16/03/2025 (~14 d)."
+        },
+        {
+          "name": "Chandrayaan-3 Vikram (ISRO)",
+          "role": "paneles de lander; tabla secundaria da 738 W",
+          "confidence": "a_verificar",
+          "note": "Tipo de celda no verificado. Sin calentadores/RHU; programado para despertar el 22/09/2023, sin senal (theprint.in, space.com, universetoday.com; prensa)."
+        }
+      ],
+      "sources": [
+        {
+          "id": "D1",
+          "ref": "Spectrolab XTJ Prime, datasheet fechado 7/16/18",
+          "kind": "datasheet",
+          "url": "https://www.spectrolab.com/photovoltaics/XTJ-Prime_Data_Sheet.pdf",
+          "file": "data/raw/datasheets/spectrolab_xtj_prime.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D2",
+          "ref": "Azur Space 3G30-Advanced 6x12, DB 00010893-02, 24/03/2026",
+          "kind": "datasheet",
+          "url": "https://www.azurspace.com/media/uploads/file_links/file/bdb_00010893-02-00_3g30-advanced_6x12.pdf",
+          "file": "data/raw/datasheets/azur_3g30_advanced.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D7",
+          "ref": "NASA/JPL D-101316, Solar Power Technologies for Future Planetary Science Missions (dic 2017); recoge datos de azurspace.com, solaerotech.com y spectrolab.com a 07/09/2016",
+          "kind": "paper",
+          "url": "https://solarsystem.nasa.gov/system/downloadable_items/715_Solar_Power_Tech_Report_FINAL.PDF",
+          "file": "data/raw/datasheets/nasa_planetary_2017.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D16",
+          "ref": "Firefly, Blue Ghost Mission 1",
+          "kind": "pagina_fabricante",
+          "url": "https://fireflyspace.com/missions/blue-ghost-mission-1/",
+          "file": "data/raw/datasheets/firefly_bg1.html",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D17",
+          "ref": "Rocket Lab, 23/01/2025",
+          "kind": "nota_de_prensa_fabricante",
+          "url": "https://www.nasdaq.com/press-release/fireflys-blue-ghost-spacecraft-begins-journey-moon-supported-rocket-lab-software-and",
+          "file": "data/raw/datasheets/rl_blueghost_pr.html",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D18",
+          "ref": "press kit NASA IM-1: leído, NO da potencia de los paneles ni tipo de celda",
+          "kind": "agencia",
+          "url": "https://www.nasa.gov/wp-content/uploads/2024/01/np-2023-12-016-jsc-clps-im-press-kit-web-508.pdf",
+          "file": "data/raw/datasheets/nasa_im1_presskit.pdf",
+          "read": "2026-11-14"
+        }
+      ],
+      "evidence_group": "respaldado",
+      "evidence_level": "datasheet",
+      "evidence_summary": "η, γ_T, α, masa y degradación leídos en datasheets de Azur 3G30-Advanced (p.2) y Spectrolab XTJ Prime (p.1-2); γ_T derivada de los coeficientes de Vmp y Jmp. Emisividades: ningún datasheet las da.",
+      "areal_power_w_m2_am0": {
+        "value": 401.5,
+        "unit": "W/m2",
+        "formula": "eta_bol_default (29.5 %) x 1361 W/m2",
+        "irradiance_W_m2": 1361,
+        "temperature_ref_C": 28,
+        "evidence": "derivado",
+        "note": "Celda 3G30C-Advanced desnuda. Con XTJ Prime (30.7 %) serían 417.8 W/m2."
+      }
+    },
+    {
+      "id": "tj-gaas-vertical-mast",
+      "name": "Array vertical en mastil (tipo VSAT / LSITP de NASA)",
+      "cell_technology": "celdas de alta eficiencia espacial (tipo GaAs multiunion) sobre manta desplegable; tipo exacto en los prototipos: a verificar",
+      "description": "Concepto NASA para sol rasante: manta vertical en mastil telescopico de hasta ~32 ft (~9.8 m) para ganar altura sobre el horizonte topografico y orientacion normal al Sol.",
+      "mounting_default": "vertical_az_tracking",
+      "mounting_allowed": [
+        "vertical_fixed",
+        "vertical_az_tracking"
+      ],
+      "efficiency_bol_pct": {
+        "min": 29.1,
+        "max": 30.7,
+        "default": 29.5,
+        "evidence": "derivado",
+        "basis": "Hereda la celda 3J de referencia (D2 p.2, D1 p.1) por SUPOSICIÓN de que VSAT usa una 3J del catálogo; no hay dato publicado de la celda de VSAT.",
+        "confidence": "estimado"
+      },
+      "temp_coeff_pmax_pct_per_K": {
+        "value": -0.23,
+        "valid_range_C": [
+          15,
+          125
+        ],
+        "derivation": "heredado de la celda 3J de referencia (ver tj-gaas-lander-body)",
+        "confidence": "estimado",
+        "evidence": "derivado"
+      },
+      "ref_temperature_C": 28,
+      "thermal": {
+        "absorptivity_front": {
+          "value": 0.91,
+          "confidence": "estimado",
+          "evidence": "derivado",
+          "note": "heredado de Azur 3G30A (D2 p.2)"
+        },
+        "emissivity_front": {
+          "value": 0.85,
+          "confidence": "a_verificar"
+        },
+        "emissivity_back": {
+          "value": 0.8,
+          "confidence": "a_verificar"
+        }
+      },
+      "mass_and_specific_power": {
+        "cell_level_specific_power_W_kg": {
+          "min": null,
+          "max": null,
+          "evidence": "no_disponible",
+          "confidence": "a_verificar",
+          "note": "sin cifras publicadas de masa del array VSAT"
+        }
+      },
+      "design_figures": {
+        "VSAT_baseline_kW": {
+          "value": 10,
+          "confidence": "a_verificar",
+          "note": "NASA 2021 'Relocatable Solar Array' 10 kW (pv-magazine); no confirmado para los prototipos 2023 [Degradado el 14/11/2026: fuente no releída en esta pasada.]"
+        },
+        "VSAT_XL_kW": {
+          "value": 50,
+          "confidence": "a_verificar",
+          "note": "Astrobotic, SBIR Phase II (jul 2024), montado sobre Griffin [Degradado el 14/11/2026: fuente no releída en esta pasada.]"
+        },
+        "mast_height_ft": {
+          "value": 32,
+          "confidence": "a_verificar",
+          "note": "techo de diseno del programa VSAT de NASA [Degradado el 14/11/2026: fuente no releída en esta pasada.]"
+        }
+      },
+      "degradation_defaults": {
+        "radiation_retention_ref": null,
+        "radiation_factor": 1.0,
+        "dust_factor": 1.0,
+        "note": "La altura del mastil reduce, segun el concepto, el sombreado por relieve cercano; el efecto del polvo a gran altura es a verificar."
+      },
+      "iam": {
+        "model": "fresnel_1_interface",
+        "note": "Con seguimiento azimutal, theta = h y el IAM es ~1; sin seguimiento aplicar cos(Az_s - Az_p)."
+      },
+      "missions": [
+        {
+          "name": "VSAT / LSITP - prototipos de Astrobotic, Honeybee Robotics y Lockheed Martin",
+          "role": "NASA concede 19.4 M USD; objetivo: desplegar un sistema cerca del polo sur a finales de la decada",
+          "confidence": "a_verificar",
+          "note": "Astrobotic ensayo VSAT en TVAC (JSC, jul 2024). [Degradado el 14/11/2026: fuente no releída en esta pasada.]"
+        },
+        {
+          "name": "Griffin Mission One (Astrobotic) / VSAT-XL",
+          "role": "VSAT-XL se disena para ir sobre Griffin; si Griffin-1 lo lleva: a verificar",
+          "confidence": "a_verificar",
+          "note": "Griffin-1 lleva el rover FLIP segun fuentes secundarias."
+        },
+        {
+          "name": "LunaGrid (Astrobotic)",
+          "role": "red de potencia lunar planificada alimentada por VSAT",
+          "confidence": "a_verificar",
+          "note": "concepto/planificado [Degradado el 14/11/2026: fuente no releída en esta pasada.]"
+        }
+      ],
+      "sources": [
+        {
+          "id": "D1",
+          "ref": "Spectrolab XTJ Prime, datasheet fechado 7/16/18",
+          "kind": "datasheet",
+          "url": "https://www.spectrolab.com/photovoltaics/XTJ-Prime_Data_Sheet.pdf",
+          "file": "data/raw/datasheets/spectrolab_xtj_prime.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D2",
+          "ref": "Azur Space 3G30-Advanced 6x12, DB 00010893-02, 24/03/2026",
+          "kind": "datasheet",
+          "url": "https://www.azurspace.com/media/uploads/file_links/file/bdb_00010893-02-00_3g30-advanced_6x12.pdf",
+          "file": "data/raw/datasheets/azur_3g30_advanced.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "S6",
+          "ref": "NASA, Three Companies to Help NASA Advance Solar Array Technology for Moon (NO releída en esta pasada)",
+          "url": "https://www.nasa.gov/news-release/three-companies-to-help-nasa-advance-solar-array-technology-for-moon"
+        },
+        {
+          "id": "S7",
+          "ref": "Astrobotic, Developing XL Solar Array Tech for Lunar Power Infrastructure (jul 2024) (NO releída en esta pasada)",
+          "url": "https://www.astrobotic.com/astrobotic-developing-xl-solar-array-tech-for-lunar-power-infrastructure/"
+        },
+        {
+          "id": "S8",
+          "ref": "pv-magazine 22/07/2021, NASA developing 10 kW movable PV array for moon mission (NO releída en esta pasada)",
+          "url": "https://www.pv-magazine.com/2021/07/22/nasa-developing-10-kw-movable-pv-array-for-moon-mission"
+        }
+      ],
+      "evidence_group": "respaldado",
+      "evidence_level": "derivado",
+      "evidence_summary": "Parámetros de celda heredados de los datasheets 3J (Azur 3G30C, Spectrolab XTJ Prime). La celda real de VSAT no está publicada: 'respaldado' vale para la celda de referencia modelada, no para el prototipo.",
+      "areal_power_w_m2_am0": {
+        "value": 401.5,
+        "unit": "W/m2",
+        "formula": "eta_bol_default (29.5 %) x 1361 W/m2",
+        "irradiance_W_m2": 1361,
+        "temperature_ref_C": 28,
+        "evidence": "derivado",
+        "note": "Celda 3J de referencia; el array VSAT real no tiene cifra publicada."
+      }
+    },
+    {
+      "id": "mj-4j-high-eff",
+      "name": "Multiunión de alta eficiencia (Rocket Lab SolAero: Z4J+, Z4J, IMM-α)",
+      "cell_technology": "Z4J/Z4J+: 4 uniones sobre germanio (datasheet). IMM-α: inverted metamorphic n-on-p (el datasheet no indica el nº de uniones)",
+      "description": "Estado del arte comercial de celdas espaciales. Aporta ~8 % relativo sobre 3J; es irrelevante frente al efecto de orientacion en el polo sur.",
+      "mounting_default": "vertical_fixed",
+      "mounting_allowed": [
+        "horizontal",
+        "tilted",
+        "vertical_fixed",
+        "vertical_az_tracking"
+      ],
+      "efficiency_bol_pct": {
+        "min": 30.0,
+        "max": 32.0,
+        "default": 31.3,
+        "evidence": "datasheet",
+        "basis": "Default = Z4J+ CIC con coverglass 100 um, AM0 135.3 mW/cm2, 28 C: 31.3 % (D3 p.2; Vmp x Jmp = 3.31 V x 12.8 = 42.4 mW/cm2). Z4J bare 30.0 % (D4 p.2). IMM-α 32.0 % (D5 p.1-2, 'mínimo promedio' declarado). Se retira IMM-β 33.3 % (solo nota de prensa, no leída).",
+        "source": [
+          "D3",
+          "D4",
+          "D5"
+        ],
+        "confidence": "publicado"
+      },
+      "temp_coeff_pmax_pct_per_K": {
+        "value": -0.264,
+        "min": -0.254,
+        "max": -0.196,
+        "valid_range_C": [
+          28,
+          80
+        ],
+        "evidence": "datasheet",
+        "derivation": "Z4J+ MEDIDO 28-80 C (D3 p.2): Pmp' = -0.1117 mW/cm2/K / 42.37 mW/cm2 (3.31 V x 12.8 mA/cm2) = -0.264 %/K ('coeficientes simplificados'). Z4J (D4 p.2): -103 uW/cm2/K / 40.7 mW/cm2 (3.54 x 11.5) = -0.253 %/K. IMM-α PROYECTADO por el fabricante (D5 p.2): (-11.2 mV/K x 10.12 + 6.7 uA/K x 4.28 V)/43.3 mW/cm2 = -0.195 %/K.",
+        "source": [
+          "D3",
+          "D4",
+          "D5"
+        ],
+        "confidence": "publicado"
+      },
+      "ref_temperature_C": 28,
+      "thermal": {
+        "absorptivity_front": {
+          "value": 0.91,
+          "confidence": "a_verificar",
+          "evidence": "no_disponible",
+          "note": "ningún datasheet Rocket Lab leído da α; se toma el de 3G30A (D2 p.2) como aproximación"
+        },
+        "emissivity_front": {
+          "value": 0.85,
+          "confidence": "a_verificar"
+        },
+        "emissivity_back": {
+          "value": 0.8,
+          "confidence": "a_verificar"
+        }
+      },
+      "mass_and_specific_power": {
+        "cell_mass_mg_cm2": {
+          "value": 49,
+          "evidence": "datasheet",
+          "confidence": "publicado",
+          "note": "IMM-α bare cell, '42 % menos que ZTJ' (D5 p.1); CIC con coverglass 2/3/4/6 mil: 70.6/76.9/83.3/96.0 mg/cm2 (D5 p.2, orden de la tabla)"
+        },
+        "cell_level_specific_power_W_kg": {
+          "value": 884,
+          "evidence": "derivado",
+          "confidence": "estimado",
+          "note": "0.32 x 135.3 mW/cm2 / 49 mg/cm2 (IMM-α, solo celda). Z4J/Z4J+: masa no publicada en el datasheet."
+        }
+      },
+      "degradation_defaults": {
+        "radiation_retention_ref": {
+          "fluence_1MeV_e_cm2": "1E15",
+          "pmp_remaining": 0.894,
+          "evidence": "datasheet",
+          "confidence": "publicado",
+          "note": "Z4J+ con recocido ECSS (D3 p.2): 0.966 a 1E14, 0.894 a 1E15, 0.715 a 1E16. Z4J 0.90 (D4 p.2); IMM-α 0.87 (D5 p.2)."
+        },
+        "radiation_factor": 1.0,
+        "dust_factor": 1.0
+      },
+      "iam": {
+        "model": "fresnel_1_interface",
+        "note": "ver tj-gaas-lander-body"
+      },
+      "missions": [
+        {
+          "name": "Uso lunar en superficie",
+          "role": "no se ha encontrado mision lunar publicada que use IMM/Z4J; plausible en landers futuros",
+          "confidence": "a_verificar",
+          "note": "No se ha encontrado misión lunar publicada que use Z4J/IMM; plausible en landers futuros. Rocket Lab suministra paneles a Blue Ghost M1 (D17) pero la celda NO está declarada."
+        }
+      ],
+      "sources": [
+        {
+          "id": "D3",
+          "ref": "Rocket Lab SolAero Z4J+ (2024)",
+          "kind": "datasheet",
+          "url": "https://www.rocketlabusa.com/assets/Uploads/RL-SolAero-Data-Sheet-Z4J+-v8.pdf",
+          "file": "data/raw/datasheets/rl_z4j_plus.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D4",
+          "ref": "Rocket Lab SolAero Z4J",
+          "kind": "datasheet",
+          "url": "https://www.rocketlabusa.com/assets/Uploads/RL-SolAero-Data-Sheet-Z4J.pdf",
+          "file": "data/raw/datasheets/rl_z4j.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D5",
+          "ref": "Rocket Lab SolAero IMM-alfa; coeficientes de temperatura PROYECTADOS por el fabricante (nota al pie p.2)",
+          "kind": "datasheet",
+          "url": "https://www.rocketlabusa.com/assets/Uploads/RL-SolAero-Data-Sheet-IMM-Alpha.pdf",
+          "file": "data/raw/datasheets/rl_imm_alpha.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D17",
+          "ref": "Rocket Lab, 23/01/2025",
+          "kind": "nota_de_prensa_fabricante",
+          "url": "https://www.nasdaq.com/press-release/fireflys-blue-ghost-spacecraft-begins-journey-moon-supported-rocket-lab-software-and",
+          "file": "data/raw/datasheets/rl_blueghost_pr.html",
+          "read": "2026-11-14"
+        }
+      ],
+      "evidence_group": "respaldado",
+      "evidence_level": "datasheet",
+      "evidence_summary": "Z4J+ (p.2): η 31.3 % CIC AM0 28 C y Pmp' medido -0.1117 mW/cm2/K (28-80 C) = -0.264 %/K; Z4J (p.2): 30.0 %, Pmp' -103 uW/cm2/K; IMM-α (p.1-2): 32.0 % mín. promedio, 49 mg/cm2, coeficientes PROYECTADOS.",
+      "areal_power_w_m2_am0": {
+        "value": 426.0,
+        "unit": "W/m2",
+        "formula": "eta_bol_default (31.3 %) x 1361 W/m2",
+        "irradiance_W_m2": 1361,
+        "temperature_ref_C": 28,
+        "evidence": "derivado",
+        "note": "Z4J+ CIC. IMM-α (32.0 %) daría 435.5 W/m2; Z4J (30.0 %) 408.3 W/m2."
+      }
+    },
+    {
+      "id": "rosa-flexible-rollout",
+      "name": "Manta desplegable ROSA (Redwire) - flexible enrollable",
+      "cell_technology": "manta flexible enrollable agnóstica a la celda (III-V o Si); celda de referencia del modelo = 3J de los datasheets Azur/Spectrolab",
+      "description": "Arquitectura de montaje ligera y desplegable. En órbita lunar: PPE de Gateway. En superficie: concepto aplicable a mástiles verticales; no hay misión de superficie confirmada.",
+      "mounting_default": "vertical_az_tracking",
+      "mounting_allowed": [
+        "tilted",
+        "vertical_fixed",
+        "vertical_az_tracking"
+      ],
+      "efficiency_bol_pct": {
+        "min": 29.1,
+        "max": 30.7,
+        "default": 29.5,
+        "evidence": "derivado",
+        "basis": "Hereda la celda 3J (D2 p.2, D1 p.1). Eficiencia a nivel manta: no_disponible; es una cota superior. Se retiran el mínimo 27 % y el máximo 33.3 % anteriores (juicio de LSI sin fuente).",
+        "confidence": "estimado"
+      },
+      "temp_coeff_pmax_pct_per_K": {
+        "value": -0.23,
+        "valid_range_C": [
+          15,
+          125
+        ],
+        "evidence": "derivado",
+        "derivation": "heredado de la celda 3J (-0.231/-0.233 %/K, ver tj-gaas-lander-body)",
+        "confidence": "estimado"
+      },
+      "ref_temperature_C": 28,
+      "thermal": {
+        "absorptivity_front": {
+          "value": 0.91,
+          "confidence": "estimado",
+          "evidence": "derivado",
+          "note": "heredado de Azur 3G30A (D2 p.2)"
+        },
+        "emissivity_front": {
+          "value": 0.85,
+          "confidence": "suposicion",
+          "evidence": "no_disponible",
+          "note": "sin dato leído; vidrio con cerio típico"
+        },
+        "emissivity_back": {
+          "value": 0.8,
+          "confidence": "suposicion",
+          "evidence": "no_disponible",
+          "note": "sin dato leído; sustrato poliimida/Kapton supuesto"
+        }
+      },
+      "mass_and_specific_power": {
+        "panel_specific_power_W_kg": {
+          "min": 71.0,
+          "max": 124.1,
+          "evidence": "derivado",
+          "confidence": "estimado",
+          "note": "BOL power / mass de la tabla del flysheet Redwire (D8 p.1; 'aproximación basada en planes de diseño actuales'): Diamond 3.3 kW/36 kg = 91.7; Opal 5.3/42.7 = 124.1; Sapphire 12.9/160 = 80.6; Tanzanite 17.6/180 = 97.8; SunStone 28/331 = 84.6; Phenacite 37/521 = 71.0 W/kg. Sin superficie en el flysheet: W/m2 de array no disponible. Densidad de potencia estibada ~40 kW/m3."
+        },
+        "array_configurations": [
+          {
+            "name": "Diamond",
+            "deployed_length_m": 8.6,
+            "mass_kg": 36,
+            "bol_power_kw": 3.3,
+            "stowed_width_m": 2.32
+          },
+          {
+            "name": "Opal",
+            "deployed_length_m": 12.6,
+            "mass_kg": 42.7,
+            "bol_power_kw": 5.3,
+            "stowed_width_m": 2.67
+          },
+          {
+            "name": "Sapphire",
+            "deployed_length_m": 21.2,
+            "mass_kg": 160,
+            "bol_power_kw": 12.9,
+            "stowed_width_m": 3.35
+          },
+          {
+            "name": "Tanzanite",
+            "deployed_length_m": 24.8,
+            "mass_kg": 180,
+            "bol_power_kw": 17.6,
+            "stowed_width_m": 4.15
+          },
+          {
+            "name": "SunStone",
+            "deployed_length_m": 19.4,
+            "mass_kg": 331,
+            "bol_power_kw": 28,
+            "stowed_width_m": 3.1
+          },
+          {
+            "name": "Phenacite",
+            "deployed_length_m": 18.5,
+            "mass_kg": 521,
+            "bol_power_kw": 37,
+            "stowed_width_m": 4.94
+          }
+        ]
+      },
+      "degradation_defaults": {
+        "radiation_retention_ref": null,
+        "radiation_factor": 1.0,
+        "dust_factor": 1.0
+      },
+      "iam": {
+        "model": "fresnel_1_interface"
+      },
+      "missions": [
+        {
+          "name": "ISS ROSA (demostración)",
+          "role": "lanzado el 03/06/2017 (CRS-11); experimento de 2 semanas fuera de la ISS, manta parcialmente poblada con tres tipos de celda",
+          "confidence": "publicado",
+          "note": "NTRS 20190000446 (D10) p.1-2. LEO."
+        },
+        {
+          "name": "Gateway PPE (NASA/Maxar)",
+          "role": "dos alas, 60-65 kW (fuentes discrepan)",
+          "confidence": "a_verificar",
+          "note": "Órbita lunar, no superficie. La nota de Redwire (businesswire 02/07/2025) solo se vio en resultados de búsqueda; no releída."
+        }
+      ],
+      "sources": [
+        {
+          "id": "D8",
+          "ref": "Redwire ROSA flysheet v1_10-2-2025; misma tabla en https://rdw.com/product-archive/power/rosa/ (redwire_rosa_page.html)",
+          "kind": "datasheet",
+          "url": "https://rdw.com/wp-content/uploads/2023/06/redwire-roll-out-solar-array-flysheet.pdf",
+          "file": "data/raw/datasheets/redwire_rosa_flysheet.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D10",
+          "ref": "Chamberlain, Kiefer, Banik: On-Orbit Structural Dynamics Performance of the ROSA",
+          "kind": "paper",
+          "url": "https://ntrs.nasa.gov/api/citations/20190000446/downloads/20190000446.pdf",
+          "file": "data/raw/datasheets/ntrs_20190000446.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D2",
+          "ref": "Azur Space 3G30-Advanced 6x12, DB 00010893-02, 24/03/2026",
+          "kind": "datasheet",
+          "url": "https://www.azurspace.com/media/uploads/file_links/file/bdb_00010893-02-00_3g30-advanced_6x12.pdf",
+          "file": "data/raw/datasheets/azur_3g30_advanced.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D1",
+          "ref": "Spectrolab XTJ Prime, datasheet fechado 7/16/18",
+          "kind": "datasheet",
+          "url": "https://www.spectrolab.com/photovoltaics/XTJ-Prime_Data_Sheet.pdf",
+          "file": "data/raw/datasheets/spectrolab_xtj_prime.pdf",
+          "read": "2026-11-14"
+        }
+      ],
+      "evidence_group": "respaldado",
+      "evidence_level": "derivado",
+      "evidence_summary": "ROSA es una arquitectura de montaje agnóstica a la celda (flysheet Redwire p.1; el experimento ISS 2017 voló 'parcialmente poblado con tres tipos de celdas', NTRS 20190000446 p.2). Masa y potencia BOL por configuración leídas del flysheet (W/kg derivados). η y γ_T son los de la celda 3J de referencia: la pérdida de empaquetado de la manta NO está publicada, así que η de manta ≤ η de celda.",
+      "areal_power_w_m2_am0": {
+        "value": 401.5,
+        "unit": "W/m2",
+        "formula": "eta_bol_default (29.5 %) x 1361 W/m2",
+        "irradiance_W_m2": 1361,
+        "temperature_ref_C": 28,
+        "evidence": "derivado",
+        "note": "Cota superior (celda 3J): el flysheet no da superficie ni eficiencia de manta."
+      }
+    },
+    {
+      "id": "si-legacy",
+      "name": "Silicio (heredado: misiones lunares antiguas)",
+      "cell_technology": "silicio cristalino de uso espacial",
+      "description": "Tecnologia de las primeras sondas (Surveyor, Lunojod). Solo para comparacion pedagogica: ninguna mision moderna de CLPS lo usa segun las fuentes consultadas.",
+      "estimate_without_datasheet": {
+        "value": true,
+        "note": "Experimental / datasheet INCOMPLETO: η, degradación y masa tienen fuente leída, pero NO el coeficiente de temperatura ni α/ε del silicio espacial; esos valores son aproximaciones de LSI con rango. Silicio espacial: solo comparación pedagógica; ninguna misión lunar moderna de CLPS lo usa según las fuentes."
+      },
+      "mounting_default": "horizontal",
+      "mounting_allowed": [
+        "horizontal",
+        "tilted"
+      ],
+      "efficiency_bol_pct": {
+        "min": 16.9,
+        "max": 17.4,
+        "default": 17.4,
+        "evidence": "datasheet",
+        "basis": "Sharp Si space cell, p-type PERC, CIC: 17.4 % BOL con Pmax 23.8 mW/cm2 a AM0 136.7 mW/cm2, 25 C (D6 p.1-2). Azur 'high efficiency silicon' 16.9 % AM0 28 C (NASA/JPL D-101316 PDF p.30; datos de azurspace.com, su datasheet no se leyó).",
+        "source": [
+          "D6",
+          "D7"
+        ],
+        "confidence": "publicado"
+      },
+      "temp_coeff_pmax_pct_per_K": {
+        "value": -0.45,
+        "min": -0.6,
+        "max": -0.3,
+        "valid_range_C": null,
+        "evidence": "no_disponible",
+        "derivation": "NO DISPONIBLE: el datasheet Sharp (D6) y el informe JPL (D7) no dan coeficiente de temperatura del Si. Aproximación de LSI -0.45 %/K con rango -0.60..-0.30 (orden típico del Si cristalino; no leído en fuente). Etiqueta: investigación.",
+        "confidence": "suposicion"
+      },
+      "ref_temperature_C": 25,
+      "thermal": {
+        "absorptivity_front": {
+          "value": 0.8,
+          "min": 0.75,
+          "max": 0.88,
+          "confidence": "suposicion",
+          "evidence": "no_disponible",
+          "note": "sin dato leído (D6/D7 no lo dan para Si); juicio de LSI"
+        },
+        "emissivity_front": {
+          "value": 0.85,
+          "min": 0.8,
+          "max": 0.88,
+          "confidence": "suposicion",
+          "evidence": "no_disponible",
+          "note": "vidrio de cubierta con cerio; sin dato leído"
+        },
+        "emissivity_back": {
+          "value": 0.8,
+          "min": 0.5,
+          "max": 0.85,
+          "confidence": "suposicion",
+          "evidence": "no_disponible",
+          "note": "depende del sustrato; sin dato leído"
+        }
+      },
+      "mass_and_specific_power": {
+        "cell_mass_mg_cm2": {
+          "value": 32,
+          "evidence": "paper",
+          "confidence": "publicado",
+          "note": "Azur Si bare cell, vía NASA/JPL D-101316 PDF p.30"
+        },
+        "cell_level_specific_power_W_kg": {
+          "value": 715,
+          "evidence": "derivado",
+          "confidence": "estimado",
+          "note": "0.169 x 135.3 mW/cm2 / 32 mg/cm2 (Azur, solo celda desnuda). Sharp: masa no publicada en su datasheet. ELSA de Redwire (D9) declara >100 W/kg a nivel array con Si o III-V."
+        }
+      },
+      "degradation_defaults": {
+        "radiation_retention_ref": {
+          "fluence_1MeV_e_cm2": "1E15",
+          "pmp_remaining": 0.62,
+          "evidence": "datasheet",
+          "confidence": "publicado",
+          "note": "Sharp (D6 p.2): Pmax/Eff 0.75 a 1E14 y 0.62 a 1E15 (EOL 13.1 % y 10.8 %). Mucho peor que III-V (0.85-0.89 a 1E15)."
+        },
+        "radiation_factor": 1.0,
+        "dust_factor": 1.0
+      },
+      "iam": {
+        "model": "fresnel_1_interface"
+      },
+      "missions": [
+        {
+          "name": "Lunojod 2 (URSS, 1973)",
+          "role": "panel solar en la cara interior de una tapa abatible; polvo depositado tras incidente en crater",
+          "confidence": "a_verificar",
+          "note": "tipo de celda: a verificar [Degradado: presentación JHUAPL/LSIC no releída.]"
+        },
+        {
+          "name": "Surveyor (NASA, 1966-68)",
+          "role": "panel solar en lander",
+          "confidence": "a_verificar",
+          "note": "tipo de celda: a verificar"
+        }
+      ],
+      "sources": [
+        {
+          "id": "D6",
+          "ref": "Sharp Silicon Space Solar Cells, 22/03/2024",
+          "kind": "datasheet",
+          "url": "https://global.sharp/solar/en/space-qualified/pdf/datasheet_Si-CIC.pdf",
+          "file": "data/raw/datasheets/sharp_si_cic.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D7",
+          "ref": "NASA/JPL D-101316, Solar Power Technologies for Future Planetary Science Missions (dic 2017); recoge datos de azurspace.com, solaerotech.com y spectrolab.com a 07/09/2016",
+          "kind": "paper",
+          "url": "https://solarsystem.nasa.gov/system/downloadable_items/715_Solar_Power_Tech_Report_FINAL.PDF",
+          "file": "data/raw/datasheets/nasa_planetary_2017.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D9",
+          "ref": "Redwire ELSA, producto hermano de ROSA (Si o III-V, >100 W/kg)",
+          "kind": "datasheet",
+          "url": "https://rdw.com/wp-content/uploads/2025/08/Redwire-ELSA-Flysheet.pdf",
+          "file": "data/raw/datasheets/redwire_elsa_flysheet.pdf",
+          "read": "2026-11-14"
+        }
+      ],
+      "evidence_group": "experimental_sin_datasheet",
+      "evidence_level": "investigacion",
+      "evidence_summary": "η y degradación SÍ de datasheet (Sharp p.1-2: 17.4 % AM0 136.7 mW/cm2 25 C; Pmax 0.75/0.62 a 1E14/1E15); Azur Si 16.9 % y 32 mg/cm2 vía NASA/JPL. Faltan γ_T, α y ε en fuente primaria: valores propuestos con rango, etiquetados.",
+      "areal_power_w_m2_am0": {
+        "value": 236.8,
+        "unit": "W/m2",
+        "formula": "eta_bol_default (17.4 %) x 1361 W/m2",
+        "irradiance_W_m2": 1361,
+        "temperature_ref_C": 25,
+        "evidence": "derivado",
+        "note": "Celda/CIC Sharp. La medida directa Pmax es 23.8 mW/cm2 = 238 W/m2 a 136.7 mW/cm2 y 25 C."
+      }
+    },
+    {
+      "id": "cigs-thin-film-flex",
+      "name": "CIGS / pelicula delgada flexible",
+      "cell_technology": "Cu(In,Ga)Se2 sobre sustrato flexible (p. ej. Ascent Solar)",
+      "description": "Masa muy baja y bajo coste; eficiencia notablemente menor que III-V. En LEO (ISS MISSE-X); estudios de NASA Marshall para Lunar Pallet Lander en el polo sur, pero sin mision lunar confirmada.",
+      "estimate_without_datasheet": {
+        "value": true,
+        "note": "Experimental / sin datasheet espacial. η AM0 solo de nota de prensa del fabricante y de un paper de laboratorio antiguo; γ_T de un módulo terrestre (AM1.5, 25 C) extrapolado a AM0; α/ε sin dato. Sin medida en la Luna."
+      },
+      "mounting_default": "horizontal",
+      "mounting_allowed": [
+        "horizontal",
+        "tilted",
+        "vertical_fixed"
+      ],
+      "efficiency_bol_pct": {
+        "min": 8.84,
+        "max": 15.7,
+        "default": 15.7,
+        "evidence": "investigacion",
+        "basis": "Máx/default = Ascent Solar 15.7 % AM0 a escala de producción (nota de prensa 09/06/2025, D12; la nota habla de 'STC y AM0': ambiguo; no es datasheet). Mín = celda CIGS2 sobre acero flexible 8.84 % AM0 medida en NASA GRC (D13 p.1, 2002, laboratorio). El default 15.7 es el MEJOR caso declarado, no un valor típico.",
+        "source": [
+          "D12",
+          "D13"
+        ],
+        "confidence": "a_verificar"
+      },
+      "temp_coeff_pmax_pct_per_K": {
+        "value": -0.38,
+        "min": -0.45,
+        "max": -0.3,
+        "valid_range_C": null,
+        "evidence": "investigacion",
+        "derivation": "MiaSole FLEX-03N (módulo CIGS flexible TERRESTRE): coeficiente de Pmpp -0.38 %/°C a STC (1000 W/m2, 25 °C, AM1.5) (D11 p.2). NO medido a AM0 ni en vacío. Rango -0.45..-0.30 = juicio de LSI.",
+        "source": [
+          "D11"
+        ],
+        "confidence": "a_verificar"
+      },
+      "ref_temperature_C": 25,
+      "thermal": {
+        "absorptivity_front": {
+          "value": 0.88,
+          "min": 0.8,
+          "max": 0.93,
+          "confidence": "suposicion",
+          "note": "pelicula delgada oscura sobre poliimida; sin dato leido. Juicio de LSI",
+          "evidence": "no_disponible"
+        },
+        "emissivity_front": {
+          "value": 0.8,
+          "min": 0.7,
+          "max": 0.88,
+          "confidence": "suposicion",
+          "note": "encapsulante polimerico o vidrio fino; sin dato leido",
+          "evidence": "no_disponible"
+        },
+        "emissivity_back": {
+          "value": 0.8,
+          "min": 0.5,
+          "max": 0.88,
+          "confidence": "suposicion",
+          "note": "poliimida trasera sin recubrimiento; Kapton ~0.8 (Rockwell SPS 1976)",
+          "evidence": "no_disponible"
+        }
+      },
+      "mass_and_specific_power": {
+        "panel_specific_power_W_kg": {
+          "value": 1960,
+          "evidence": "investigacion",
+          "confidence": "a_verificar",
+          "note": "Ascent Solar: módulo Titan 15.7 W, ~8 g, 'antes de encapsulación' (D12). Sin encapsulado ni estructura: NO es nivel panel. Declaración de fabricante, sin datasheet."
+        },
+        "areal_mass_kg_m2": {
+          "value": 1.8,
+          "evidence": "datasheet",
+          "confidence": "a_verificar",
+          "note": "MiaSole FLEX-03N módulo terrestre sin adhesivo (D11 p.2); 2.2 kg/m2 con adhesivo. No es de grado espacial."
+        }
+      },
+      "degradation_defaults": {
+        "radiation_retention_ref": null,
+        "radiation_factor": 1.0,
+        "dust_factor": 1.0
+      },
+      "iam": {
+        "model": "fresnel_1_interface"
+      },
+      "missions": [
+        {
+          "name": "Ascent Solar en ISS (MISSE-X) y LISA-T",
+          "role": "demostraciones en orbita terrestre",
+          "confidence": "a_verificar",
+          "note": "Fuente secundaria (no releída)."
+        },
+        {
+          "name": "Lunar Pallet Lander (estudio NASA Marshall)",
+          "role": "analisis termico de pelicula delgada para sitio del polo sur",
+          "confidence": "a_verificar",
+          "note": "Estudio NASA Marshall (TFAWS 2018, NTRS 20180006427): descargado y comprobado; las diapositivas no dan η ni α/ε utilizables y CIGS no está en la lista de paneles analizada con valores. Es estudio, no misión."
+        }
+      ],
+      "sources": [
+        {
+          "id": "D11",
+          "ref": "MiaSole FLEX-03N: MÓDULO TERRESTRE, STC AM1.5, 25 C (no es dato espacial)",
+          "kind": "datasheet",
+          "url": "https://cdn.shopify.com/s/files/1/0257/3103/9284/files/flex-03n-datasheet.pdf",
+          "file": "data/raw/datasheets/miasole_flex03.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D12",
+          "ref": "Ascent Solar, GlobeNewswire 09/06/2025; ni datasheet ni medida certificada",
+          "kind": "nota_de_prensa_fabricante",
+          "url": "https://www.nasdaq.com/press-release/ascent-solar-technologies-achieves-record-new-efficiency-157-production-scale-its",
+          "file": "data/raw/datasheets/ascent_pr_157.html",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D13",
+          "ref": "Dhere et al., CIGS2 sobre acero flexible (NASA/CP-2002-211831); celda de laboratorio medida AM0 en NASA GRC",
+          "kind": "paper",
+          "url": "https://ntrs.nasa.gov/api/citations/20030000597/downloads/20030000597.pdf",
+          "file": "data/raw/datasheets/ntrs_20030000597.pdf",
+          "read": "2026-11-14"
+        }
+      ],
+      "evidence_group": "experimental_sin_datasheet",
+      "evidence_level": "investigacion",
+      "evidence_summary": "Sin datasheet espacial. AM0: 15.7 % (nota de prensa Ascent, módulo Titan, no certificado) y 8.84 % (celda de laboratorio, NASA GRC, 2002). γ_T -0.38 %/°C y 1.8 kg/m2 son de un módulo TERRESTRE (MiaSolé FLEX-03N, STC AM1.5).",
+      "areal_power_w_m2_am0": {
+        "value": 213.7,
+        "unit": "W/m2",
+        "formula": "eta_bol_default (15.7 %) x 1361 W/m2",
+        "irradiance_W_m2": 1361,
+        "temperature_ref_C": 25,
+        "evidence": "investigacion",
+        "note": "Declaración de fabricante: cota superior experimental. El módulo terrestre MiaSole da 144-170 W/m2 a STC (14.4-17.0 %, D11 p.2)."
+      }
+    },
+    {
+      "id": "perovskite-si-tandem-demo",
+      "name": "Perovskita-silicio en tandem (solo demostracion)",
+      "cell_technology": "perovskita sobre silicio, 2 uniones (Hanwha Qcells)",
+      "description": "Tecnologia en demostracion tecnologica en superficie lunar (SSTEF-1). No usar como opcion de diseno: estabilidad en vacio, UV y radiacion es precisamente lo que se va a medir.",
+      "estimate_without_datasheet": {
+        "value": true,
+        "note": "Experimental / sin datasheet. Perovskita-Si NO es una opción de diseño: la degradación por protones (Joule 2020: η ~1 % de la inicial) no está modelada en el balance de potencia y es lo que SSTEF-1 va a medir en superficie lunar."
+      },
+      "mounting_default": "horizontal",
+      "mounting_allowed": [
+        "horizontal"
+      ],
+      "efficiency_bol_pct": {
+        "min": 19.2,
+        "max": 27.49,
+        "default": 19.2,
+        "evidence": "paper",
+        "basis": "Default = tándem monolítico perovskita/SHJ encapsulado en cuarzo, 19.2 % bajo AM0 (1350 W/m2) con ~257 W/m2 estabilizados (Lang et al., Joule 2020, D14; η AM1.5G 21.3 %; AM0 'mimetizado' con LED y EQE, no con simulador AM0 certificado). Máx = 27.49 % AM0 certificado (Tianjin Univ. et al., SOLO noticia de perovskite-info D15; paper no localizado ni leído: a verificar). Se retira el 21.1 % PVSC 2020 (solo resumen de búsqueda).",
+        "source": [
+          "D14",
+          "D15"
+        ],
+        "confidence": "publicado"
+      },
+      "temp_coeff_pmax_pct_per_K": {
+        "value": -0.26,
+        "min": -0.3,
+        "max": -0.2,
+        "valid_range_C": null,
+        "evidence": "no_disponible",
+        "derivation": "NO DISPONIBLE en fuente leída: Babics et al., ACS Energy Lett. 2023 (D19, solo resumen) dice que el coeficiente de Isc depende del espectro y del rango de T, sin dar Pmax. El -0.26 %/K (KAUST, exterior AM1.5) viene de un comentario de perovskite-info, no del paper. Rango -0.30..-0.20 = juicio de LSI.",
+        "confidence": "a_verificar"
+      },
+      "ref_temperature_C": 25,
+      "thermal": {
+        "absorptivity_front": {
+          "value": 0.85,
+          "min": 0.75,
+          "max": 0.92,
+          "confidence": "suposicion",
+          "note": "tandem con cubierta; sin dato leido. Juicio de LSI",
+          "evidence": "no_disponible"
+        },
+        "emissivity_front": {
+          "value": 0.85,
+          "min": 0.75,
+          "max": 0.88,
+          "confidence": "suposicion",
+          "note": "vidrio de cubierta con cerio; emisividad >0.84 (Qioptiq/Excelitas, fuente secundaria)",
+          "evidence": "no_disponible"
+        },
+        "emissivity_back": {
+          "value": 0.8,
+          "min": 0.5,
+          "max": 0.85,
+          "confidence": "suposicion",
+          "note": "sustrato rigido o flexible sin dato; ver Rockwell SPS 1976",
+          "evidence": "no_disponible"
+        }
+      },
+      "mass_and_specific_power": {
+        "cell_mass_mg_cm2": {
+          "value": 61,
+          "evidence": "paper",
+          "confidence": "publicado",
+          "note": "capa activa perovskita/SHJ de 261.5 um (Joule 2020 D14), SIN encapsulado ni sustrato"
+        },
+        "cell_level_specific_power_W_kg": {
+          "value": 420,
+          "evidence": "paper",
+          "confidence": "publicado",
+          "note": "0.42 W/g declarado en Joule 2020 (D14) sin encapsulado; con vidrio/cuarzo bajaría."
+        }
+      },
+      "degradation_defaults": {
+        "radiation_retention_ref": {
+          "particle": "protones 68 MeV",
+          "fluence_p_cm2": "1E11",
+          "pmp_remaining": 0.01,
+          "evidence": "paper",
+          "confidence": "publicado",
+          "note": "Joule 2020 (D14): perovskita/SHJ cae a ~1 % de η tras ~1E11 p+/cm2 (Jsc 21.5 -> 0.3 mA/cm2; potencia 257 -> 4 W/m2); perovskita/CIGS retiene ~85 %. Medido en laboratorio con protones, no con e- de 1 MeV."
+        },
+        "radiation_factor": 1.0,
+        "dust_factor": 1.0,
+        "note": "El fotovoltaico no tiene datos de degradacion en Luna; el default 1.0 NO implica estabilidad."
+      },
+      "iam": {
+        "model": "fresnel_1_interface"
+      },
+      "missions": [
+        {
+          "name": "SSTEF-1 (Aegis Aerospace, financiado por NASA; GTRI) en IM-3 / Nova-C",
+          "role": "muestras de celdas tandem de Hanwha Qcells expuestas en la superficie",
+          "confidence": "a_verificar",
+          "note": "Fecha de IM-3 'finales de 2026' segun un medio polaco; confirmar con NASA/Aegis. (Aegis/Qcells sin releer.)"
+        }
+      ],
+      "sources": [
+        {
+          "id": "D14",
+          "ref": "Lang et al., Joule 2020, Proton Radiation Hardness of Perovskite Tandem Photovoltaics; texto completo leído (Europe PMC PMC7238692; XML en data/raw/datasheets/joule2020_lang_europepmc.xml)",
+          "kind": "paper",
+          "url": "https://doi.org/10.1016/j.joule.2020.03.006",
+          "file": "data/raw/datasheets/joule2020_lang_europepmc.txt",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D15",
+          "ref": "noticia sobre un paper (Tianjin Univ. et al.) que NO se localizó ni leyó",
+          "kind": "prensa_secundaria",
+          "url": "https://www.perovskite-info.com/perovskitesilicon-tandem-hits-certified-2749-efficiency-space-conditions",
+          "file": "data/raw/datasheets/perovskite_info_2749.html",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D19",
+          "ref": "Babics et al., ACS Energy Lett. 2023: solo resumen; no da coeficiente de Pmax",
+          "kind": "abstract",
+          "url": "https://doi.org/10.1021/acsenergylett.3c00930",
+          "file": "data/raw/datasheets/kaust_tempcoef.html",
+          "read": "2026-11-14"
+        }
+      ],
+      "evidence_group": "experimental_sin_datasheet",
+      "evidence_level": "investigacion",
+      "evidence_summary": "Solo laboratorio, sin medida espacial ni datasheet. Joule 2020 (leído): tándem perovskita/SHJ 19.2 % AM0 (1350 W/m2, ~257 W/m2), 61 mg/cm2 (0.42 W/g sin encapsulado) y cae a ~1 % de η tras ~1E11 protones/cm2 de 68 MeV. No hay γ_T medido a AM0 en fuente leída.",
+      "areal_power_w_m2_am0": {
+        "value": 261.3,
+        "unit": "W/m2",
+        "formula": "eta_bol_default (19.2 %) x 1361 W/m2",
+        "irradiance_W_m2": 1361,
+        "temperature_ref_C": 25,
+        "evidence": "derivado",
+        "note": "Joule 2020 declara ~257 W/m2 a 1350 W/m2; con 1361 W/m2 y 19.2 % salen 261.3 W/m2. Cota experimental; con protones se degrada a ~1 %."
+      }
+    },
+    {
+      "id": "tj-gaas-rover-body",
+      "name": "GaAs triple union montado en cuerpo de rover",
+      "cell_technology": "multiunion espacial (tipo exacto en rovers concretos: a verificar)",
+      "description": "Paneles en la cubierta del rover (horizontal) o inclinados; el rover no sobrevive a la noche sin RHU (hiberna con baterias).",
+      "mounting_default": "horizontal",
+      "mounting_allowed": [
+        "horizontal",
+        "tilted"
+      ],
+      "efficiency_bol_pct": {
+        "min": 29.1,
+        "max": 30.7,
+        "default": 29.5,
+        "evidence": "derivado",
+        "basis": "Celda 3J de referencia (D2 p.2, D1 p.1) supuesta para el rover; los rovers reales no publican su celda.",
+        "confidence": "estimado"
+      },
+      "temp_coeff_pmax_pct_per_K": {
+        "value": -0.23,
+        "valid_range_C": [
+          15,
+          125
+        ],
+        "derivation": "heredado de celda 3J",
+        "confidence": "estimado",
+        "evidence": "derivado"
+      },
+      "ref_temperature_C": 28,
+      "thermal": {
+        "absorptivity_front": {
+          "value": 0.91,
+          "confidence": "estimado",
+          "evidence": "derivado",
+          "note": "heredado de Azur 3G30A (D2 p.2)"
+        },
+        "emissivity_front": {
+          "value": 0.85,
+          "confidence": "a_verificar"
+        },
+        "emissivity_back": {
+          "value": 0.8,
+          "confidence": "a_verificar"
+        }
+      },
+      "mass_and_specific_power": {
+        "cell_level_specific_power_W_kg": {
+          "value": null,
+          "evidence": "no_disponible",
+          "confidence": "a_verificar"
+        }
+      },
+      "degradation_defaults": {
+        "radiation_retention_ref": null,
+        "radiation_factor": 1.0,
+        "dust_factor": 1.0,
+        "note": "Los rovers levantan polvo con las ruedas: dust_factor del rover es el parametro mas incierto."
+      },
+      "iam": {
+        "model": "fresnel_1_interface"
+      },
+      "missions": [
+        {
+          "name": "Pragyan (Chandrayaan-3, ISRO)",
+          "role": "panel de ~50 W en el chasis; bateria pequena solo para el despliegue",
+          "confidence": "a_verificar",
+          "note": "fuente secundaria (Wikipedia); tipo de celda a verificar [Degradado el 14/11/2026: fuente secundaria/no releída.]"
+        },
+        {
+          "name": "Yutu-2 (Chang'e-4, CNSA)",
+          "role": "pliega los paneles y usa RHU en la noche lunar",
+          "confidence": "a_verificar",
+          "note": "Space.com [Degradado el 14/11/2026: fuente secundaria/no releída.]"
+        },
+        {
+          "name": "FLIP (Astrolab) en Griffin-1",
+          "role": "rover comercial planificado",
+          "confidence": "a_verificar",
+          "note": "potencia/celda: a verificar"
+        }
+      ],
+      "sources": [
+        {
+          "id": "D1",
+          "ref": "Spectrolab XTJ Prime, datasheet fechado 7/16/18",
+          "kind": "datasheet",
+          "url": "https://www.spectrolab.com/photovoltaics/XTJ-Prime_Data_Sheet.pdf",
+          "file": "data/raw/datasheets/spectrolab_xtj_prime.pdf",
+          "read": "2026-11-14"
+        },
+        {
+          "id": "D2",
+          "ref": "Azur Space 3G30-Advanced 6x12, DB 00010893-02, 24/03/2026",
+          "kind": "datasheet",
+          "url": "https://www.azurspace.com/media/uploads/file_links/file/bdb_00010893-02-00_3g30-advanced_6x12.pdf",
+          "file": "data/raw/datasheets/azur_3g30_advanced.pdf",
+          "read": "2026-11-14"
+        }
+      ],
+      "evidence_group": "respaldado",
+      "evidence_level": "derivado",
+      "evidence_summary": "Celda 3J de referencia (datasheets Azur/Spectrolab); la celda real de cada rover no está publicada.",
+      "areal_power_w_m2_am0": {
+        "value": 401.5,
+        "unit": "W/m2",
+        "formula": "eta_bol_default (29.5 %) x 1361 W/m2",
+        "irradiance_W_m2": 1361,
+        "temperature_ref_C": 28,
+        "evidence": "derivado",
+        "note": "Celda 3J de referencia; el panel real de cada rover no tiene cifra publicada."
+      }
+    }
+  ],
+  "mission_profiles": {
+    "_note": "Los umbrales alimentan el score de calidad del sitio. Hay DOS tipos: 'hard' (el sitio es inviable para el perfil si se incumple) y 'soft' (penaliza). Todos son configurables. Donde confidence != publicado, la UI debe mostrar la etiqueta.",
+    "lander_solar_no_rhu": {
+      "label": "Lander solar sin RHU ni baterias de gran capacidad (clase Nova-C / Blue Ghost)",
+      "min_useful_power_fraction": {
+        "value": 0.25,
+        "type": "soft",
+        "confidence": "suposicion",
+        "note": "fraccion de la potencia nominal on-sun para considerar 'operativo'; parametro de diseno sin fuente"
+      },
+      "max_dark_h_no_nuclear": {
+        "value": 12,
+        "type": "hard",
+        "confidence": "estimado",
+        "note": "25 Ah x 28 V = 700 Wh (Wikipedia) x 0.8 usable / 50 W de carga de supervivencia (la carga de 50 W es SUPOSICION). Consistente con '10-20 h de bateria' de Odysseus tras el aterrizaje (Reuters)."
+      },
+      "min_contiguous_earth_window_h": {
+        "value": 2,
+        "type": "soft",
+        "confidence": "suposicion"
+      },
+      "max_landing_slope_deg": {
+        "design": 10,
+        "navigation_target": 5,
+        "failure_observed": null,
+        "final_tilt_deg_observed": 30,
+        "type": "hard",
+        "confidence": "a_verificar",
+        "note": "Declaracion del CTO de Intuitive Machines (prensa, secundaria): diseno >=10 grados, software busca <=5; no es especificacion. Odysseus (IM-1) quedo con una inclinacion final de ~30 grados (flyingmag.com, inverse.com; prensa). La pendiente local de ~12 grados (atribuida a LRO) NO se confirmo en fuente primaria: failure_observed pasa de 12 a null (a verificar). Ver docs/validation/correcciones-catalogo.md."
+      },
+      "design_life_surface_days": {
+        "value": 14,
+        "confidence": "a_verificar",
+        "note": "IM-1 ~14 d (Wikipedia/Skyrocket, secundaria); un dia lunar. Referencias: IM-2 planificada ~10 d (spacepolicyonline.com, astronomy.com); Blue Ghost M1 ~14 d, apagada al ocaso el 16/03/2025 (nasa.gov, space.com)."
+      }
+    },
+    "lander_with_batteries": {
+      "label": "Lander con baterias dimensionadas para noche corta polar",
+      "min_useful_power_fraction": {
+        "value": 0.25,
+        "type": "soft",
+        "confidence": "suposicion"
+      },
+      "max_dark_h_no_nuclear": {
+        "value": 36,
+        "type": "hard",
+        "confidence": "suposicion",
+        "note": "El mejor punto de la cresta de Shackleton tiene oscuridad continua maxima ~1.5 d = 36 h (Mazarico et al.). A 50 W de supervivencia exige ~1.8 kWh utiles: cifra de diseno hipotetica, a verificar con un lander real."
+      },
+      "min_contiguous_earth_window_h": {
+        "value": 2,
+        "type": "soft",
+        "confidence": "suposicion"
+      },
+      "max_landing_slope_deg": {
+        "design": 10,
+        "navigation_target": 5,
+        "type": "hard",
+        "confidence": "publicado",
+        "note": "mismos valores que lander_solar_no_rhu (Intuitive Machines)"
+      }
+    },
+    "rover": {
+      "label": "Rover (sin RHU)",
+      "min_useful_power_fraction": {
+        "value": 0.3,
+        "type": "soft",
+        "confidence": "suposicion"
+      },
+      "max_dark_h_no_nuclear": {
+        "value": 12,
+        "type": "hard",
+        "confidence": "suposicion",
+        "note": "Pragyan y Yutu-2 hibernan toda la noche; solo Yutu-2 la sobrevivio, con RHU. Sin RHU el limite lo fija la bateria de hibernacion: a verificar."
+      },
+      "min_contiguous_earth_window_h": {
+        "value": 2,
+        "type": "soft",
+        "confidence": "suposicion"
+      },
+      "max_traverse_slope_deg": {
+        "value": 15,
+        "type": "soft",
+        "confidence": "a_verificar",
+        "note": "recuerdo del requisito de VIPER; verificar antes de usar. No es pendiente de aterrizaje."
+      },
+      "max_landing_slope_deg": {
+        "design": null,
+        "type": "n/a",
+        "confidence": "a_verificar",
+        "note": "el rover llega en un lander: aplica el perfil del lander"
+      }
+    },
+    "base_isru": {
+      "label": "Base / ISRU (necesita potencia continua)",
+      "min_useful_power_fraction": {
+        "value": 0.75,
+        "type": "hard",
+        "confidence": "suposicion",
+        "note": "para operar sin interrupciones se necesita casi potencia continua o almacenamiento masivo"
+      },
+      "min_useful_power_kWe": {
+        "value": 10,
+        "range": [
+          10,
+          40
+        ],
+        "type": "soft",
+        "confidence": "publicado",
+        "note": "NASA FSP: usuarios 10-40 kWe; requisito >40 kWe continuos 10 anos para fision (NTRS 2022-2024). El umbral solar es un orden de magnitud, no un requisito de mision."
+      },
+      "max_dark_h_no_nuclear": {
+        "value": 24,
+        "type": "hard",
+        "confidence": "suposicion",
+        "note": "con regenerative fuel cell o baterias masivas; a verificar"
+      },
+      "min_contiguous_earth_window_h": {
+        "value": 8,
+        "type": "soft",
+        "confidence": "suposicion"
+      },
+      "max_landing_slope_deg": {
+        "design": 5,
+        "type": "hard",
+        "confidence": "suposicion",
+        "note": "pad de aterrizaje y habitat; se toma el objetivo de navegacion de Nova-C como orden de magnitud"
+      }
+    },
+    "dte_comms": {
+      "label": "Comunicaciones directas a Tierra (DTE)",
+      "min_earth_elevation_deg": {
+        "value": 0.0,
+        "type": "hard",
+        "confidence": "estimado",
+        "note": "visibilidad geometrica sobre el horizonte local (terreno + curvatura). Sensibilidad 3-5 grados por patron de antena y terreno: suposicion."
+      },
+      "earth_elevation_margin_deg": {
+        "value": 3.0,
+        "type": "soft",
+        "confidence": "suposicion"
+      },
+      "min_contiguous_earth_window_h": {
+        "value": 2,
+        "type": "soft",
+        "confidence": "suposicion"
+      },
+      "ground_station_min_elevation_deg": {
+        "value": 6,
+        "type": "soft",
+        "confidence": "publicado",
+        "note": "limite mecanico de antenas DSN: 5.923 grados (34 m) y 5.962 grados (70 m) (NTRS 20120004035). ESTRACK: a verificar. NO se modela por defecto la visibilidad de la Luna desde la estacion."
+      }
+    }
+  },
+  "sources_global": [
+    {
+      "id": "G1",
+      "ref": "Mazarico et al. 2011/2012, Illumination conditions of the lunar polar regions using LOLA topography (Shackleton: ~240 d/ano, oscuridad continua maxima ~1.5 d)",
+      "url": "https://ntrs.nasa.gov/citations/20120010094"
+    },
+    {
+      "id": "G2",
+      "ref": "Glaser et al. 2018, Shackleton rim ~85.5 % iluminacion (via resumen NASA)",
+      "url": "https://pgda.gsfc.nasa.gov/products/78"
+    },
+    {
+      "id": "G3",
+      "ref": "NASA NTRS 20120004035, DSN antenna elevation limits",
+      "url": "https://ntrs.nasa.gov/api/citations/20120004035/downloads/20120004035.pdf"
+    },
+    {
+      "id": "G4",
+      "ref": "NASA NTRS 19920002733, Lunar dust transport and interactions with power system components",
+      "url": "https://ntrs.nasa.gov/citations/19920002733"
+    }
+  ],
+  "evidence_levels": {
+    "datasheet": "valor leído literalmente en el datasheet/hoja técnica del fabricante (fichero en data/raw/datasheets/)",
+    "paper": "valor leído en un paper revisado por pares o informe de agencia (NASA/JPL), con sección o página",
+    "derivado": "calculado a partir de valores leídos; la fórmula se indica",
+    "investigacion": "sin datasheet ni medida espacial: solo laboratorio, nota de prensa del fabricante o aproximación con rango; NO usar como cifra de diseño",
+    "no_disponible": "no existe en fuente primaria localizada; se propone aproximación con rango y etiqueta"
+  },
+  "evidence_groups": {
+    "respaldado": "η y coeficiente de temperatura proceden de datasheet/paper o se derivan de ellos",
+    "experimental_sin_datasheet": "falta al menos η o γ_T en fuente primaria espacial; siempre visible y etiquetado, nunca mezclado con los respaldados en rankings por defecto"
+  },
+  "datasheet_sources": {
+    "D1": {
+      "file": "data/raw/datasheets/spectrolab_xtj_prime.pdf",
+      "url": "https://www.spectrolab.com/photovoltaics/XTJ-Prime_Data_Sheet.pdf",
+      "kind": "datasheet",
+      "read": "2026-11-14",
+      "note": "Spectrolab XTJ Prime, datasheet fechado 7/16/18"
+    },
+    "D2": {
+      "file": "data/raw/datasheets/azur_3g30_advanced.pdf",
+      "url": "https://www.azurspace.com/media/uploads/file_links/file/bdb_00010893-02-00_3g30-advanced_6x12.pdf",
+      "kind": "datasheet",
+      "read": "2026-11-14",
+      "note": "Azur Space 3G30-Advanced 6x12, DB 00010893-02, 24/03/2026"
+    },
+    "D3": {
+      "file": "data/raw/datasheets/rl_z4j_plus.pdf",
+      "url": "https://www.rocketlabusa.com/assets/Uploads/RL-SolAero-Data-Sheet-Z4J+-v8.pdf",
+      "kind": "datasheet",
+      "read": "2026-11-14",
+      "note": "Rocket Lab SolAero Z4J+ (2024)"
+    },
+    "D4": {
+      "file": "data/raw/datasheets/rl_z4j.pdf",
+      "url": "https://www.rocketlabusa.com/assets/Uploads/RL-SolAero-Data-Sheet-Z4J.pdf",
+      "kind": "datasheet",
+      "read": "2026-11-14",
+      "note": "Rocket Lab SolAero Z4J"
+    },
+    "D5": {
+      "file": "data/raw/datasheets/rl_imm_alpha.pdf",
+      "url": "https://www.rocketlabusa.com/assets/Uploads/RL-SolAero-Data-Sheet-IMM-Alpha.pdf",
+      "kind": "datasheet",
+      "read": "2026-11-14",
+      "note": "Rocket Lab SolAero IMM-alfa; coeficientes de temperatura PROYECTADOS por el fabricante (nota al pie p.2)"
+    },
+    "D6": {
+      "file": "data/raw/datasheets/sharp_si_cic.pdf",
+      "url": "https://global.sharp/solar/en/space-qualified/pdf/datasheet_Si-CIC.pdf",
+      "kind": "datasheet",
+      "read": "2026-11-14",
+      "note": "Sharp Silicon Space Solar Cells, 22/03/2024"
+    },
+    "D7": {
+      "file": "data/raw/datasheets/nasa_planetary_2017.pdf",
+      "url": "https://solarsystem.nasa.gov/system/downloadable_items/715_Solar_Power_Tech_Report_FINAL.PDF",
+      "kind": "paper",
+      "read": "2026-11-14",
+      "note": "NASA/JPL D-101316, Solar Power Technologies for Future Planetary Science Missions (dic 2017); recoge datos de azurspace.com, solaerotech.com y spectrolab.com a 07/09/2016"
+    },
+    "D8": {
+      "file": "data/raw/datasheets/redwire_rosa_flysheet.pdf",
+      "url": "https://rdw.com/wp-content/uploads/2023/06/redwire-roll-out-solar-array-flysheet.pdf",
+      "kind": "datasheet",
+      "read": "2026-11-14",
+      "note": "Redwire ROSA flysheet v1_10-2-2025; misma tabla en https://rdw.com/product-archive/power/rosa/ (redwire_rosa_page.html)"
+    },
+    "D9": {
+      "file": "data/raw/datasheets/redwire_elsa_flysheet.pdf",
+      "url": "https://rdw.com/wp-content/uploads/2025/08/Redwire-ELSA-Flysheet.pdf",
+      "kind": "datasheet",
+      "read": "2026-11-14",
+      "note": "Redwire ELSA, producto hermano de ROSA (Si o III-V, >100 W/kg)"
+    },
+    "D10": {
+      "file": "data/raw/datasheets/ntrs_20190000446.pdf",
+      "url": "https://ntrs.nasa.gov/api/citations/20190000446/downloads/20190000446.pdf",
+      "kind": "paper",
+      "read": "2026-11-14",
+      "note": "Chamberlain, Kiefer, Banik: On-Orbit Structural Dynamics Performance of the ROSA"
+    },
+    "D11": {
+      "file": "data/raw/datasheets/miasole_flex03.pdf",
+      "url": "https://cdn.shopify.com/s/files/1/0257/3103/9284/files/flex-03n-datasheet.pdf",
+      "kind": "datasheet",
+      "read": "2026-11-14",
+      "note": "MiaSole FLEX-03N: MÓDULO TERRESTRE, STC AM1.5, 25 C (no es dato espacial)"
+    },
+    "D12": {
+      "file": "data/raw/datasheets/ascent_pr_157.html",
+      "url": "https://www.nasdaq.com/press-release/ascent-solar-technologies-achieves-record-new-efficiency-157-production-scale-its",
+      "kind": "nota_de_prensa_fabricante",
+      "read": "2026-11-14",
+      "note": "Ascent Solar, GlobeNewswire 09/06/2025; ni datasheet ni medida certificada"
+    },
+    "D13": {
+      "file": "data/raw/datasheets/ntrs_20030000597.pdf",
+      "url": "https://ntrs.nasa.gov/api/citations/20030000597/downloads/20030000597.pdf",
+      "kind": "paper",
+      "read": "2026-11-14",
+      "note": "Dhere et al., CIGS2 sobre acero flexible (NASA/CP-2002-211831); celda de laboratorio medida AM0 en NASA GRC"
+    },
+    "D14": {
+      "file": "data/raw/datasheets/joule2020_lang_europepmc.txt",
+      "url": "https://doi.org/10.1016/j.joule.2020.03.006",
+      "kind": "paper",
+      "read": "2026-11-14",
+      "note": "Lang et al., Joule 2020, Proton Radiation Hardness of Perovskite Tandem Photovoltaics; texto completo leído (Europe PMC PMC7238692; XML en data/raw/datasheets/joule2020_lang_europepmc.xml)"
+    },
+    "D15": {
+      "file": "data/raw/datasheets/perovskite_info_2749.html",
+      "url": "https://www.perovskite-info.com/perovskitesilicon-tandem-hits-certified-2749-efficiency-space-conditions",
+      "kind": "prensa_secundaria",
+      "read": "2026-11-14",
+      "note": "noticia sobre un paper (Tianjin Univ. et al.) que NO se localizó ni leyó"
+    },
+    "D16": {
+      "file": "data/raw/datasheets/firefly_bg1.html",
+      "url": "https://fireflyspace.com/missions/blue-ghost-mission-1/",
+      "kind": "pagina_fabricante",
+      "read": "2026-11-14",
+      "note": "Firefly, Blue Ghost Mission 1"
+    },
+    "D17": {
+      "file": "data/raw/datasheets/rl_blueghost_pr.html",
+      "url": "https://www.nasdaq.com/press-release/fireflys-blue-ghost-spacecraft-begins-journey-moon-supported-rocket-lab-software-and",
+      "kind": "nota_de_prensa_fabricante",
+      "read": "2026-11-14",
+      "note": "Rocket Lab, 23/01/2025"
+    },
+    "D18": {
+      "file": "data/raw/datasheets/nasa_im1_presskit.pdf",
+      "url": "https://www.nasa.gov/wp-content/uploads/2024/01/np-2023-12-016-jsc-clps-im-press-kit-web-508.pdf",
+      "kind": "agencia",
+      "read": "2026-11-14",
+      "note": "press kit NASA IM-1: leído, NO da potencia de los paneles ni tipo de celda"
+    },
+    "D19": {
+      "file": "data/raw/datasheets/kaust_tempcoef.html",
+      "url": "https://doi.org/10.1021/acsenergylett.3c00930",
+      "kind": "abstract",
+      "read": "2026-11-14",
+      "note": "Babics et al., ACS Energy Lett. 2023: solo resumen; no da coeficiente de Pmax"
+    }
+  }
+}

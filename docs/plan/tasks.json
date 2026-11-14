@@ -1,0 +1,2359 @@
+[
+ {
+  "id": "T-001",
+  "titulo": "Entorno Python 3.11, dependencias y paquete instalable",
+  "fase": "F0",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "requirements.txt",
+   "pyproject.toml",
+   ".gitignore",
+   "src/lsi/__init__.py",
+   "src/lsi/data/__init__.py",
+   "src/lsi/terrain/__init__.py",
+   "src/lsi/astronomy/__init__.py",
+   "src/lsi/simulation/__init__.py",
+   "src/lsi/energy/__init__.py",
+   "src/lsi/analysis/__init__.py",
+   "src/lsi/visualization/__init__.py",
+   "ui/__init__.py",
+   "ui/components/__init__.py",
+   "tests/conftest.py"
+  ],
+  "depende_de": [],
+  "horas": 2,
+  "aceptacion": "En un venv limpio: `pip install -r requirements.txt && pip install -e .` termina sin error; `python -c \"import lsi.data, lsi.terrain, lsi.astronomy, lsi.simulation, lsi.energy, lsi.analysis, lsi.visualization\"` funciona; `pytest --collect-only` no falla; `.gitignore` excluye `data/raw/`, `data/processed/`, `kernels/`, `*.npy`.",
+  "requisitos": [
+   "RNF-04",
+   "RNF-09",
+   "RNF-13"
+  ],
+  "ola": 1,
+  "descripcion": "Crea el esqueleto de paquetes (con `__init__.py`), pyproject y requirements con dependencias sin fijar versión todavía (se fijan en la tarea siguiente). No toca `contracts.py` ni `arquitectura.md`.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": [
+   "tests/conftest.py"
+  ]
+ },
+ {
+  "id": "T-002",
+  "titulo": "Smoke de entorno y fijado de versiones",
+  "fase": "F0",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "requirements.txt",
+   "scripts/check_env.py",
+   "tests/test_environment.py"
+  ],
+  "depende_de": [
+   "T-001"
+  ],
+  "horas": 2,
+  "aceptacion": "`python scripts/check_env.py` imprime versiones de rasterio, pyproj, spiceypy, numpy, scipy, plotly, streamlit; carga los 6 kernels sin error; lee un GeoTIFF de `data/raw/`; `requirements.txt` queda con versiones `==` probadas; `tests/test_environment.py` pasa.",
+  "requisitos": [
+   "RNF-04"
+  ],
+  "ola": 2,
+  "descripcion": "Resuelve primero los conflictos de GDAL/rasterio en Windows (riesgo del documento base) y congela versiones.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": [
+   "tests/test_environment.py"
+  ]
+ },
+ {
+  "id": "T-003",
+  "titulo": "Script de descarga reproducible con manifiesto y checksums",
+  "fase": "F0",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "scripts/fetch_data.py",
+   "config/data_manifest.json",
+   "tests/test_fetch_manifest.py"
+  ],
+  "depende_de": [
+   "T-001"
+  ],
+  "horas": 3,
+  "aceptacion": "`python scripts/fetch_data.py --verify` informa OK para los 12 GeoTIFF y 6 kernels existentes comparando SHA-256 con el manifiesto; es idempotente (no re-descarga lo válido); con `--offline` no falla y lista lo ausente; el manifiesto registra URL de origen y fecha.",
+  "requisitos": [
+   "RF-02",
+   "RNF-04",
+   "RNF-13"
+  ],
+  "ola": 2,
+  "descripcion": "Extiende el `fetch_data.py` existente con manifiesto, verificación y modo sin red. Registra la procedencia de cada fichero.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 67,
+  "pruebas": [
+   "tests/test_fetch_manifest.py"
+  ]
+ },
+ {
+  "id": "T-004",
+  "titulo": "Cargador GeoTIFF y metadatos del DEM",
+  "fase": "F0",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "src/lsi/data/loader.py",
+   "src/lsi/data/metadata.py",
+   "tests/test_loader.py"
+  ],
+  "depende_de": [
+   "T-002"
+  ],
+  "horas": 4,
+  "aceptacion": "`load_layer(site, 'surf'|'slp'|'ldec'|'toterr')` devuelve array, transform, CRS, nodata y unidades; las 4 capas comparten malla y forma; `transform*(col+0.5,fila+0.5)` en el píxel del polo de Shackleton (fila 200, col 1800) da (0,0) ± 2,5 m; los metadatos incluyen fuente y referencia MOON_ME/DE421.",
+  "requisitos": [
+   "RF-01",
+   "RF-04",
+   "RNF-11"
+  ],
+  "ola": 3,
+  "descripcion": "No compara `crs == crs` (nombres distintos en Malapert `toterr`); compara parámetros de proyección.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": [
+   "tests/test_loader.py"
+  ]
+ },
+ {
+  "id": "T-005",
+  "titulo": "Catálogo de sitios: corregir rutas y cargador",
+  "fase": "F0",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "config/sites.json",
+   "src/lsi/data/sites.py",
+   "tests/test_sites.py"
+  ],
+  "depende_de": [
+   "T-001"
+  ],
+  "horas": 3,
+  "aceptacion": "`dem_dir` de los 3 sitios apunta a `data/raw/shackleton|de_gerlache|malapert` (el JSON actual apunta a `data/raw/dem/siteNN`, que no existe); se cargan las 32 entradas; las de lat/lon `null` no son seleccionables; lon oeste-positiva se convierte a este-positiva; test con valor esperado independiente para 3 sitios.",
+  "requisitos": [
+   "RF-15",
+   "RF-16"
+  ],
+  "ola": 2,
+  "descripcion": "Corrige una discrepancia real detectada entre `sites.json` y la estructura de `data/raw/`.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 45,
+  "pruebas": [
+   "tests/test_sites.py"
+  ]
+ },
+ {
+  "id": "T-006",
+  "titulo": "Revisión del catálogo de sitios por experto Luna",
+  "fase": "F0",
+  "rol": "experto-luna",
+  "ficheros": [
+   "docs/validation/rev-catalogo.md"
+  ],
+  "depende_de": [
+   "T-005"
+  ],
+  "horas": 3,
+  "aceptacion": "Informe con la comprobación de coordenadas de cada misión (fuente, marco, lon E/O), corrección de entradas dudosas (p. ej. IM-1) y marca `aprox` o `verificado`; cualquier corrección se aplica a `config/sites.json` mediante PR al responsable de T-sites.",
+  "requisitos": [
+   "RF-15",
+   "RNF-05"
+  ],
+  "ola": 3,
+  "descripcion": "Consultor/validador: el fichero de configuración lo edita el responsable de la tarea predecesora para evitar escrituras concurrentes.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 83,
+  "pruebas": [
+   "docs/validation/rev-catalogo.md"
+  ]
+ },
+ {
+  "id": "T-007",
+  "titulo": "Hito H0: inspección e integridad de los datos reales",
+  "fase": "F0",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "scripts/inspect_dem.py",
+   "tests/test_data_integrity.py",
+   "docs/validation/hito0-datos.md"
+  ],
+  "depende_de": [
+   "T-004"
+  ],
+  "horas": 3,
+  "aceptacion": "Reproduce las cifras del geólogo: `ldec = 0` en 90–92 % de píxeles; distancia a observación p90 15–16 m; 4 capas con la misma malla y 0 NaN; `slp` frente a diferencia central de 10 m con RMSE < 0,01°; informe H0 con CRS, extensión y estadísticos por sitio.",
+  "requisitos": [
+   "RF-01",
+   "RF-05",
+   "RNF-10"
+  ],
+  "ola": 4,
+  "descripcion": "Cierra el hito H0 del documento base (datos descargados, metadatos y CRS documentados).",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 69,
+  "pruebas": [
+   "tests/test_data_integrity.py",
+   "docs/validation/hito0-datos.md"
+  ]
+ },
+ {
+  "id": "T-008",
+  "titulo": "Proyección estereográfica polar sur",
+  "fase": "F1",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/terrain/projection.py",
+   "tests/test_projection.py"
+  ],
+  "depende_de": [
+   "T-001"
+  ],
+  "horas": 4,
+  "aceptacion": "Casos de Mat. §1.5: directa vs fórmula/pyproj ≤ 1e-6 m; ida y vuelta lat/lon ≤ 1e-9°; píxel↔x,y exacto en enteros; `always_xy=True`; error claro fuera del hemisferio sur.",
+  "requisitos": [
+   "RF-03",
+   "RNF-08"
+  ],
+  "ola": 2,
+  "descripcion": "Implementa la proyección a medida (esfera R=1737400 m, lat_ts=−90) y su equivalente pyproj.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 2,
+  "pruebas": [
+   "tests/test_projection.py"
+  ]
+ },
+ {
+  "id": "T-009",
+  "titulo": "Ventana, muestreo bilineal y máscara nodata",
+  "fase": "F1",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "src/lsi/terrain/dem.py",
+   "tests/test_dem.py"
+  ],
+  "depende_de": [
+   "T-004",
+   "T-008"
+  ],
+  "horas": 4,
+  "aceptacion": "Bilineal en el centro de píxel = valor del píxel a 1e-6 m; punto fuera de cobertura devuelve estado explícito (no 0 ni montaña); distancia al borde del DEM por azimut calculada; recorte alrededor de un punto con radio configurable.",
+  "requisitos": [
+   "RF-04",
+   "RF-03"
+  ],
+  "ola": 4,
+  "descripcion": "Es la base de horizonte, pendiente y confianza.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": [
+   "tests/test_dem.py"
+  ]
+ },
+ {
+  "id": "T-010",
+  "titulo": "Pendiente y aptitud en disco r_pie",
+  "fase": "F1",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "src/lsi/terrain/slope.py",
+   "tests/test_slope.py"
+  ],
+  "depende_de": [
+   "T-009"
+  ],
+  "horas": 3,
+  "aceptacion": "Pendiente por diferencia central (baseline 10 m) reproduce `slp` con RMSE < 0,01°; percentil 90 de pendiente en disco de 50 m; Terrain Slope listo para el score.",
+  "requisitos": [
+   "RF-05",
+   "RF-13"
+  ],
+  "ola": 5,
+  "descripcion": "No evalúa la pendiente al píxel de 5 m (contiene interpolación); la evalúa a escala del vehículo.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 21,
+  "pruebas": [
+   "tests/test_slope.py"
+  ]
+ },
+ {
+  "id": "T-011",
+  "titulo": "Horizonte 360° con curvatura (núcleo)",
+  "fase": "F1",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/terrain/horizon.py",
+   "tests/test_horizon.py"
+  ],
+  "depende_de": [
+   "T-009"
+  ],
+  "horas": 8,
+  "aceptacion": "Terreno plano: elevación = −D/(2R) en grados (−0,0165° a 1 km) con error ≤ 1e-4°; cresta sintética en un azimut: pico solo en ese sector; nodata no es obstáculo; casos H1–H5 de Mat. §2.3 ≤ 1e-4°; ΔA 0,125° vs 0,25° ≤ 0,06° en DEM real; altura de observador 1/2/5 m y radio configurables.",
+  "requisitos": [
+   "RF-06",
+   "RNF-08",
+   "RNF-10"
+  ],
+  "ola": 5,
+  "descripcion": "Muestreo radial uniforme a 5 m (no adaptativo), vectorizado con NumPy; usa la fórmula exacta con curvatura, no `atan2(z−z0, r)`.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": [
+   "tests/test_horizon.py"
+  ]
+ },
+ {
+  "id": "T-012",
+  "titulo": "Horizonte truncado: estado ABIERTO/CERRADO y cota inferior",
+  "fase": "F1",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/terrain/horizon_coverage.py",
+   "tests/test_horizon_coverage.py"
+  ],
+  "depende_de": [
+   "T-011"
+  ],
+  "horas": 4,
+  "aceptacion": "DEM sintético con pared en el borde → azimut ABIERTO; desde el centro de Shackleton ≈ 41,9 % de azimuts ABIERTOS (± 2 pp); devuelve fracción abierta, distancia mínima/mediana al borde y marca `cota_inferior`.",
+  "requisitos": [
+   "RF-07",
+   "RNF-05"
+  ],
+  "ola": 6,
+  "descripcion": "Implementa la señalización de truncado propuesta por el geólogo (§6.2).",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 11,
+  "pruebas": [
+   "tests/test_horizon_coverage.py"
+  ]
+ },
+ {
+  "id": "T-013",
+  "titulo": "Horizonte de esfera lisa y puntos fuera de DEM",
+  "fase": "F1",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/terrain/sphere_horizon.py",
+   "tests/test_sphere_horizon.py"
+  ],
+  "depende_de": [
+   "T-008"
+  ],
+  "horas": 3,
+  "aceptacion": "Observador a h m sobre esfera lisa: elevación del horizonte = −acos(R/(R+h)) con error ≤ 1e-6°; devuelve siempre la etiqueta `modo=esfera_lisa`; coincide con `horizon.py` sobre un DEM plano (test cruzado cuando exista T-horizon).",
+  "requisitos": [
+   "RF-08",
+   "RF-16"
+  ],
+  "ola": 3,
+  "descripcion": "Permite coordenadas personalizadas fuera de los 3 DEM y calcular la fracción de Tierra sobre horizonte liso para normalizar `s_tierra`.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 33,
+  "pruebas": [
+   "tests/test_sphere_horizon.py"
+  ]
+ },
+ {
+  "id": "T-014",
+  "titulo": "Motor SPICE: kernels, rango y tiempos",
+  "fase": "F1",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/astronomy/spice_engine.py",
+   "tests/test_spice_engine.py"
+  ],
+  "depende_de": [
+   "T-002"
+  ],
+  "horas": 4,
+  "aceptacion": "Carga idempotente de los 6 kernels desde `kernels/`; UTC→ET con `str2et`; fecha fuera de 1900–2050 lanza excepción propia con mensaje claro; MOON_ME vs MOON_PA = 103,85″ ± 0,5″; devuelve versión/lista de kernels para metadatos.",
+  "requisitos": [
+   "RF-09",
+   "RNF-11"
+  ],
+  "ola": 3,
+  "descripcion": "Ningún cálculo con MOON_PA ni IAU_MOON: el marco de trabajo es MOON_ME (riesgo nº 1).",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 6,
+  "pruebas": [
+   "tests/test_spice_engine.py"
+  ]
+ },
+ {
+  "id": "T-015",
+  "titulo": "Coordenadas topocéntricas ENU y azimut/elevación",
+  "fase": "F1",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/astronomy/coordinates.py",
+   "tests/test_coordinates.py"
+  ],
+  "depende_de": [
+   "T-001"
+  ],
+  "horas": 4,
+  "aceptacion": "Base ENU ortonormal ≤ 1e-12; casos de Mat. §3.2 sin SPICE; azimut N→E horario 0–360°; elevación asin(U/|v|); signo de λ comprobado con casos Este/Oeste.",
+  "requisitos": [
+   "RF-09",
+   "RNF-08"
+  ],
+  "ola": 2,
+  "descripcion": "Función pura vectorial; sin dependencia de SPICE.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 8,
+  "pruebas": [
+   "tests/test_coordinates.py"
+  ]
+ },
+ {
+  "id": "T-016",
+  "titulo": "Efemérides Sol/Tierra: az/el, distancia, tamaño angular",
+  "fase": "F1",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/astronomy/ephemeris.py",
+   "tests/test_ephemeris.py"
+  ],
+  "depende_de": [
+   "T-015",
+   "T-014"
+  ],
+  "horas": 6,
+  "aceptacion": "Regresión Mat. §3.3 `[SPICE-reg]`; Sol a −89,9° con elevación −1,625°…+1,627° ± 0,01°; tamaño angular Sol 0,5228–0,5434° ± 0,0005°; LT+S vs NONE ≈ 20,3″ ± 1″; continuidad entre instantes; observador con `spkcpo` y `georec`.",
+  "requisitos": [
+   "RF-09",
+   "RNF-03",
+   "RNF-08"
+  ],
+  "ola": 4,
+  "descripcion": "Series vectorizadas para rejillas de tiempo; paralaje de la Tierra incluido.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 6,
+  "pruebas": [
+   "tests/test_ephemeris.py"
+  ]
+ },
+ {
+  "id": "T-017",
+  "titulo": "Referencias JPL Horizons: script y casos fijos",
+  "fase": "F1",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "scripts/fetch_horizons.py",
+   "tests/data/horizons_cases.json"
+  ],
+  "depende_de": [
+   "T-001"
+  ],
+  "horas": 3,
+  "aceptacion": "Los 24 casos de `luna-spice-sitios.md` §2 quedan en JSON con az/el/rango/instante/sitio; `fetch_horizons.py` documenta parámetros (`CENTER=coord@301`, `APPARENT=AIRLESS`, `QUANTITIES=4,20`) y falla con mensaje claro sin red.",
+  "requisitos": [
+   "RF-09",
+   "RNF-08",
+   "RNF-10"
+  ],
+  "ola": 2,
+  "descripcion": "Los tests nunca usan la red: leen el JSON versionado.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 33,
+  "pruebas": []
+ },
+ {
+  "id": "T-018",
+  "titulo": "Test de contraste con Horizons (Sol y Tierra)",
+  "fase": "F1",
+  "rol": "API Tester",
+  "ficheros": [
+   "tests/test_validation_horizons.py"
+  ],
+  "depende_de": [
+   "T-016",
+   "T-017"
+  ],
+  "horas": 3,
+  "aceptacion": "Sol: error az/el ≤ 0,01° (aceptable 0,02°); Tierra ≤ 0,02° (0,05°); distancias ≤ 1e-5 relativa; para elevación > 80° se admite 0,02°; el test falla con mensaje que sugiere signo de λ o paralaje.",
+  "requisitos": [
+   "RF-09",
+   "RNF-08"
+  ],
+  "ola": 5,
+  "descripcion": "Primer contraste independiente de la cadena de marcos.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 24,
+  "pruebas": [
+   "tests/test_validation_horizons.py"
+  ]
+ },
+ {
+  "id": "T-019",
+  "titulo": "HITO H1: coordenada real de extremo a extremo (Site04)",
+  "fase": "F1",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "scripts/validate_h1_site04.py",
+   "docs/validation/hito1-site04.md"
+  ],
+  "depende_de": [
+   "T-016",
+   "T-012",
+   "T-011",
+   "T-018",
+   "T-010"
+  ],
+  "horas": 4,
+  "aceptacion": "Un solo script lee el DEM de Shackleton, convierte el punto, calcula horizonte y az/el de Sol y Tierra para ≥ 5 instantes y contrasta con Horizons; informe con CRS, kernels, marcos, tabla de errores y decisión GO/NO-GO para empezar la UI.",
+  "requisitos": [
+   "RF-03",
+   "RF-06",
+   "RF-09",
+   "RF-10"
+  ],
+  "ola": 7,
+  "descripcion": "Cumple la regla de ejecución del documento base: validar UNA coordenada real antes de construir pantallas.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 17,
+  "pruebas": [
+   "docs/validation/hito1-site04.md"
+  ]
+ },
+ {
+  "id": "T-020",
+  "titulo": "Puerta de calidad G1 (H1): revisión independiente",
+  "fase": "F1",
+  "rol": "Reality Checker",
+  "ficheros": [
+   "docs/validation/gate-h1.md"
+  ],
+  "depende_de": [
+   "T-019"
+  ],
+  "horas": 2,
+  "aceptacion": "Veredicto GO / NEEDS WORK con evidencias reproducibles (comandos y salidas); toda tarea de F4 que escribe código de UI depende de este GO.",
+  "requisitos": [
+   "RNF-05",
+   "RNF-08"
+  ],
+  "ola": 8,
+  "descripcion": "Por defecto NEEDS WORK hasta ver pruebas.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 17,
+  "pruebas": [
+   "docs/validation/gate-h1.md"
+  ]
+ },
+ {
+  "id": "T-021",
+  "titulo": "Visibilidad geométrica y disco finito",
+  "fase": "F1",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/simulation/visibility.py",
+   "tests/test_visibility.py"
+  ],
+  "depende_de": [
+   "T-016",
+   "T-011"
+  ],
+  "horas": 6,
+  "aceptacion": "Cuerpo sobre/bajo horizonte → visible/oculto; fracción visible de disco plano vs analítico ≤ 1e-4 (n=64); pared inclinada por el centro = 0,5 ± 1e-6; clasificación completo/parcial/oculto; interpolación de H en el azimut del cuerpo; zonas ABIERTO marcan «cota superior de iluminación».",
+  "requisitos": [
+   "RF-10",
+   "RF-11"
+  ],
+  "ola": 6,
+  "descripcion": "Modelo `geometric_center` por defecto y `disc` opcional.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": [
+   "tests/test_visibility.py"
+  ]
+ },
+ {
+  "id": "T-022",
+  "titulo": "Ventanas temporales, refinamiento por raíz y eventos sunset/Earthset",
+  "fase": "F1",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/simulation/timeline.py",
+   "src/lsi/simulation/events.py",
+   "tests/test_timeline.py",
+   "tests/test_events.py"
+  ],
+  "depende_de": [
+   "T-021"
+  ],
+  "horas": 9,
+  "aceptacion": "Paso 5 vs 10 min: mismo conjunto de ventanas ± 2 s; eventos vs analítico ≤ 1 s; duración vs fuerza bruta a 1 min ≤ 2 min; álgebra de solape Sol∩Tierra; `next_event(t)` devuelve tiempo restante hasta sunset/Earthset/sunrise/Earthrise y los casos «siempre visible», «siempre oculto», «ya oculto».",
+  "requisitos": [
+   "RF-12",
+   "RF-14",
+   "RNF-03"
+  ],
+  "ola": 7,
+  "descripcion": "Serie sintética que cruza el horizonte (prueba obligatoria del documento base).",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": [
+   "tests/test_timeline.py",
+   "tests/test_events.py"
+  ]
+ },
+ {
+  "id": "T-023",
+  "titulo": "Métricas de salida del documento base",
+  "fase": "F1",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "src/lsi/analysis/metrics.py",
+   "tests/test_metrics.py"
+  ],
+  "depende_de": [
+   "T-010",
+   "T-022"
+  ],
+  "horas": 4,
+  "aceptacion": "Calcula Solar Visibility, Longest Solar Window, Max Darkness, Earth Visibility, Longest Earth Window, Overlap, Terrain Slope, elevación solar mín/máx y duración de luz; casos sintéticos con resultado calculado a mano; salida en h:min y %.",
+  "requisitos": [
+   "RF-13",
+   "RF-14"
+  ],
+  "ola": 8,
+  "descripcion": "Cada métrica por separado, sin ranking.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 1,
+  "pruebas": [
+   "tests/test_metrics.py"
+  ]
+ },
+ {
+  "id": "T-024",
+  "titulo": "Data Confidence (g90, e90, ABIERTO)",
+  "fase": "F1",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "src/lsi/analysis/confidence.py",
+   "tests/test_confidence.py"
+  ],
+  "depende_de": [
+   "T-009",
+   "T-012"
+  ],
+  "horas": 4,
+  "aceptacion": "Clases ALTA/MEDIA/BAJA y valor continuo DC de Geo. §2.3; la calibración sobre rejilla de 100 m reproduce %ALTA de Shackleton 34,9 / de Gerlache 40,7 / Malapert 19,0 (± 1 pp); prueba negativa: g90 > 25 m nunca sale ALTA; resta un nivel si ABIERTO > 10 %; muestra «resolución efectiva ≈ 30 m».",
+  "requisitos": [
+   "RF-31",
+   "RNF-05"
+  ],
+  "ola": 7,
+  "descripcion": "toterr no se usa sola como confianza.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 12,
+  "pruebas": [
+   "tests/test_confidence.py"
+  ]
+ },
+ {
+  "id": "T-025",
+  "titulo": "Escenarios de incertidumbre (cobertura, σz, discretización, clones)",
+  "fase": "F1",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/simulation/uncertainty.py",
+   "src/lsi/simulation/clones.py",
+   "tests/test_uncertainty.py",
+   "tests/test_clones.py"
+  ],
+  "depende_de": [
+   "T-012",
+   "T-022"
+  ],
+  "horas": 7,
+  "aceptacion": "Devuelve escenarios nominal/pesimista/optimista con H_ub ≥ H_lb; perturbación σz con k=1; marca como «incierto» el azimut cuya dispersión supera 0,27°; con clones (si existen) K ≥ 5 y percentiles P5–P95, y sin clones degrada con aviso (Could).",
+  "requisitos": [
+   "RF-30",
+   "RF-34",
+   "RNF-05"
+  ],
+  "ola": 8,
+  "descripcion": "Los clones son opcionales: la parte Could no bloquea nada aguas abajo.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": [
+   "tests/test_uncertainty.py",
+   "tests/test_clones.py"
+  ]
+ },
+ {
+  "id": "T-026",
+  "titulo": "Orquestador de simulación, caché y metadatos",
+  "fase": "F1",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/simulation/runner.py",
+   "src/lsi/simulation/cache.py",
+   "config/simulation.json",
+   "tests/test_runner.py"
+  ],
+  "depende_de": [
+   "T-024",
+   "T-023",
+   "T-013",
+   "T-022",
+   "T-025"
+  ],
+  "horas": 5,
+  "aceptacion": "`run(site|punto, t0, t1, config)` devuelve horizonte, series, ventanas y métricas con metadatos (kernels, DEM, marco, parámetros, modo); segunda llamada idéntica sale de caché con resultado igual; punto sin DEM usa esfera lisa etiquetada; fecha fuera de rango → error claro.",
+  "requisitos": [
+   "RF-16",
+   "RF-17",
+   "RNF-03",
+   "RNF-11"
+  ],
+  "ola": 9,
+  "descripcion": "Punto de entrada único del núcleo para la UI; no importa streamlit.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": [
+   "tests/test_runner.py"
+  ]
+ },
+ {
+  "id": "T-027",
+  "titulo": "Catálogo de paneles: verificar y completar",
+  "fase": "F2",
+  "rol": "experto-proyectos-espaciales",
+  "ficheros": [
+   "config/panels.json",
+   "docs/validation/rev-paneles.md"
+  ],
+  "depende_de": [
+   "T-001"
+  ],
+  "horas": 5,
+  "aceptacion": "≥ 6 tipos con montaje permitido; cada parámetro con `confidence` ∈ {publicado, estimado, suposicion, a_verificar} y fuente; ningún valor sin fuente ni etiqueta; informe con lo verificado, lo no encontrado y la lista «qué decir / qué NO decir».",
+  "requisitos": [
+   "RF-18",
+   "RF-23",
+   "RNF-05"
+  ],
+  "ola": 2,
+  "descripcion": "Parámetros a verificar según el experto: IAM, emisividades, eficiencia de celdas de VSAT/ROSA/CIGS/perovskita, polvo.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 27,
+  "pruebas": [
+   "docs/validation/rev-paneles.md"
+  ]
+ },
+ {
+  "id": "T-028",
+  "titulo": "Cargador y validador de esquema de paneles",
+  "fase": "F2",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/energy/panels.py",
+   "tests/test_panels.py"
+  ],
+  "depende_de": [
+   "T-027"
+  ],
+  "horas": 3,
+  "aceptacion": "Carga `panels.json`; rechaza entradas con parámetro sin `confidence`; `get(id)` y listado ≥ 6; expone `confidence` para que la UI la muestre; test con JSON roto.",
+  "requisitos": [
+   "RF-18",
+   "RF-19"
+  ],
+  "ola": 3,
+  "descripcion": "Validación en la frontera de confianza (fichero de configuración editable).",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 27,
+  "pruebas": [
+   "tests/test_panels.py"
+  ]
+ },
+ {
+  "id": "T-029",
+  "titulo": "Ángulo de incidencia por montaje, IAM y distancia solar",
+  "fase": "F2",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/energy/incidence.py",
+   "src/lsi/energy/iam.py",
+   "tests/test_incidence.py",
+   "tests/test_iam.py"
+  ],
+  "depende_de": [
+   "T-015"
+  ],
+  "horas": 5,
+  "aceptacion": "cos θ para horizontal, inclinado, vertical fijo y vertical con seguimiento; casos Mat. §6.7 con ≤ 1e-4; recorte a ≥ 0; IAM coseno puro y opción Fresnel; factor S(d)/S_ref con 1361 W/m² y distancia SPICE.",
+  "requisitos": [
+   "RF-19",
+   "RF-20",
+   "RNF-08"
+  ],
+  "ola": 3,
+  "descripcion": "Panel horizontal en el polo da < 1 %; el montaje vertical con seguimiento es la cota superior.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 26,
+  "pruebas": [
+   "tests/test_incidence.py",
+   "tests/test_iam.py"
+  ]
+ },
+ {
+  "id": "T-030",
+  "titulo": "Modelo térmico estacionario y f_T",
+  "fase": "F2",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/energy/thermal.py",
+   "tests/test_thermal.py"
+  ],
+  "depende_de": [
+   "T-001"
+  ],
+  "horas": 4,
+  "aceptacion": "Balance (α − η)·G = σT⁴(ε_f + ε_b) con sumidero 3 K; f_T = 1 + k(T − T_ref) con tope 1,15; aviso fuera de `valid_range_C`; casos de Mat. §6.5.",
+  "requisitos": [
+   "RF-22",
+   "RNF-05"
+  ],
+  "ola": 2,
+  "descripcion": "Cota inferior de T para paneles casi horizontales; limitación declarada.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 31,
+  "pruebas": [
+   "tests/test_thermal.py"
+  ]
+ },
+ {
+  "id": "T-031",
+  "titulo": "Potencia relativa P_rel por panel y montaje",
+  "fase": "F2",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/energy/power.py",
+   "tests/test_power.py"
+  ],
+  "depende_de": [
+   "T-016",
+   "T-029",
+   "T-028",
+   "T-030"
+  ],
+  "horas": 6,
+  "aceptacion": "Aplica P_rel = IAM·cosθ·(S/S_ref)·f_T·f_rad·f_polvo·f_sombra para uno o varios paneles a la vez; casos Mat. §6.7 ≤ 1e-4 absoluto; horizontal < 1 % en el polo; vertical con seguimiento = cos(h); polvo y radiación editables.",
+  "requisitos": [
+   "RF-19",
+   "RF-20",
+   "RF-21",
+   "RF-23",
+   "RNF-08"
+  ],
+  "ola": 5,
+  "descripcion": "Serie temporal por panel; el resultado lleva la lista de supuestos y confianzas.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 23,
+  "pruebas": [
+   "tests/test_power.py"
+  ]
+ },
+ {
+  "id": "T-032",
+  "titulo": "Potencia con horizonte local (sombras y disco parcial)",
+  "fase": "F2",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/energy/illumination.py",
+   "tests/test_illumination.py"
+  ],
+  "depende_de": [
+   "T-031",
+   "T-021"
+  ],
+  "horas": 4,
+  "aceptacion": "P = 0 con el Sol oculto; fracción de disco visible escala la potencia; integración por eventos vs rejilla de 1 min ≤ 0,5 %; energía relativa acumulada por día.",
+  "requisitos": [
+   "RF-21",
+   "RF-11"
+  ],
+  "ola": 7,
+  "descripcion": "Une visibilidad con potencia sin mezclar sus supuestos.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 17,
+  "pruebas": [
+   "tests/test_illumination.py"
+  ]
+ },
+ {
+  "id": "T-033",
+  "titulo": "Integrador de batería y % de carga",
+  "fase": "F2",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/energy/battery.py",
+   "tests/test_battery.py"
+  ],
+  "depende_de": [
+   "T-032"
+  ],
+  "horas": 3,
+  "aceptacion": "Caso Mat. §6.8 con error ≤ 0,1 Wh; carga siempre en 0–100 %; capacidad, consumo y profundidad de descarga configurables; indica horas hasta agotamiento.",
+  "requisitos": [
+   "RF-24",
+   "RNF-08"
+  ],
+  "ola": 8,
+  "descripcion": "Responde a «% de potencia/carga en cada momento del día».",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 17,
+  "pruebas": [
+   "tests/test_battery.py"
+  ]
+ },
+ {
+  "id": "T-034",
+  "titulo": "Perfiles de misión y umbrales",
+  "fase": "F2",
+  "rol": "experto-proyectos-espaciales",
+  "ficheros": [
+   "config/mission_profiles.json",
+   "docs/validation/rev-perfiles.md"
+  ],
+  "depende_de": [
+   "T-027"
+  ],
+  "horas": 3,
+  "aceptacion": "Perfiles lander solar, lander con baterías, rover, base/ISRU y comunicaciones con potencia mínima, noche máxima, ventana de Tierra mínima y pendiente máxima; cada umbral con confianza (p. ej. 12 h estimado, 36 h suposición).",
+  "requisitos": [
+   "RF-26",
+   "RNF-05"
+  ],
+  "ola": 3,
+  "descripcion": "Alimenta score y paneles.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 27,
+  "pruebas": [
+   "docs/validation/rev-perfiles.md"
+  ]
+ },
+ {
+  "id": "T-035",
+  "titulo": "Cargador de perfiles y evaluación de umbrales",
+  "fase": "F2",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/energy/profiles.py",
+   "tests/test_profiles.py"
+  ],
+  "depende_de": [
+   "T-034"
+  ],
+  "horas": 3,
+  "aceptacion": "Carga perfiles, valida esquema y evalúa un resultado contra umbrales (cumple/incumple con motivo); umbrales sobrescribibles desde la UI; test con perfil inválido.",
+  "requisitos": [
+   "RF-26"
+  ],
+  "ola": 4,
+  "descripcion": "Código sin lógica de UI.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 27,
+  "pruebas": [
+   "tests/test_profiles.py"
+  ]
+ },
+ {
+  "id": "T-036",
+  "titulo": "Comparación de paneles y de sitios",
+  "fase": "F2",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/analysis/panel_compare.py",
+   "tests/test_panel_compare.py"
+  ],
+  "depende_de": [
+   "T-033",
+   "T-032"
+  ],
+  "horas": 3,
+  "aceptacion": "Dado un conjunto de paneles y sitios devuelve tabla con potencia media, energía relativa, horas sobre umbral y hora de agotamiento; orden estable; test con caso sintético de 2 paneles × 2 sitios.",
+  "requisitos": [
+   "RF-25"
+  ],
+  "ola": 9,
+  "descripcion": "Base de la pantalla de paneles y de la comparación.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 17,
+  "pruebas": [
+   "tests/test_panel_compare.py"
+  ]
+ },
+ {
+  "id": "T-037",
+  "titulo": "Score: subindicadores, gates, agregación geométrica y desglose explicable",
+  "fase": "F3",
+  "rol": "AI Engineer",
+  "ficheros": [
+   "src/lsi/analysis/ranking.py",
+   "config/score.yaml",
+   "tests/test_ranking.py",
+   "src/lsi/analysis/explain.py",
+   "tests/test_explain.py"
+  ],
+  "depende_de": [
+   "T-024",
+   "T-023",
+   "T-035"
+  ],
+  "horas": 9,
+  "aceptacion": "Ejemplo Mat. §7.7: lander_solar = 67,9 (± 0,05), rover 70,2, comunicaciones 76,7; s_i ≡ 1 → 100; s_i = 0 → 100·ε^w; reordenar indicadores no cambia S; gates producen estado y motivo sin anular el score; parámetros leídos de `score.yaml`; si el resultado viene de modo esfera lisa el score lleva la etiqueta «sin datos de terreno» y el gate G3 se activa. En el ejemplo §7.7 el eslabón débil es `s_noche` (55,9 %); «S si s_noche = 1» = 84,3; la tabla incluye valor medido, s_i, peso, contribución y gates; lista de supuestos incluida.",
+  "requisitos": [
+   "RF-27",
+   "RF-28",
+   "RF-29",
+   "RF-32",
+   "RF-48",
+   "RNF-08"
+  ],
+  "ola": 9,
+  "descripcion": "Media geométrica ponderada no compensatoria; todas las constantes son configuración. Transparencia: sin ranking opaco.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 1,
+  "pruebas": [
+   "tests/test_ranking.py",
+   "tests/test_explain.py"
+  ]
+ },
+ {
+  "id": "T-038",
+  "titulo": "Score con rango [S_min, S_max] y etiqueta de confianza",
+  "fase": "F3",
+  "rol": "AI Engineer",
+  "ficheros": [
+   "src/lsi/analysis/score_range.py",
+   "tests/test_score_range.py"
+  ],
+  "depende_de": [
+   "T-037",
+   "T-025"
+  ],
+  "horas": 4,
+  "aceptacion": "Ejemplo de Mat. §7.7 devuelve «68 (61–74)»; C = min(c_cov, c_sup, c_rango) con etiqueta alta/media/baja; el rango usa los escenarios de T-unc.",
+  "requisitos": [
+   "RF-30",
+   "RF-31"
+  ],
+  "ola": 10,
+  "descripcion": "La confianza no multiplica a S.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 1,
+  "pruebas": [
+   "tests/test_score_range.py"
+  ]
+ },
+ {
+  "id": "T-039",
+  "titulo": "Score ligado a la potencia efectiva del panel",
+  "fase": "F3",
+  "rol": "AI Engineer",
+  "ficheros": [
+   "src/lsi/analysis/solar_effective.py",
+   "tests/test_solar_effective.py"
+  ],
+  "depende_de": [
+   "T-032",
+   "T-037"
+  ],
+  "horas": 3,
+  "aceptacion": "f_sol efectiva = fracción de tiempo con P_rel ≥ umbral del perfil; cambiar de panel cambia s_sol de forma monótona; el modo «geométrico» sigue disponible y se etiqueta.",
+  "requisitos": [
+   "RF-33",
+   "RF-20"
+  ],
+  "ola": 10,
+  "descripcion": "Une las dos funcionalidades nuevas del usuario.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 3,
+  "pruebas": [
+   "tests/test_solar_effective.py"
+  ]
+ },
+ {
+  "id": "T-040",
+  "titulo": "Revisión geológica: terreno, confianza y horizonte",
+  "fase": "F3",
+  "rol": "geologo-planetario",
+  "ficheros": [
+   "docs/validation/rev-geologo.md",
+   "tests/test_horizon_los.py"
+  ],
+  "depende_de": [
+   "T-024",
+   "T-012",
+   "T-010"
+  ],
+  "horas": 6,
+  "aceptacion": "Horizonte vs segundo algoritmo de línea de vista en 5 puntos reales con diferencia < 0,1°; sensibilidad a altura de observador 0/2/10 m y DEM 20 m; fracción de azimuts que cambian > 0,25° al recortar a la mitad; pruebas negativas (interior de Shackleton no es «buen sitio solar»).",
+  "requisitos": [
+   "RF-06",
+   "RF-07",
+   "RF-31",
+   "RNF-05"
+  ],
+  "ola": 8,
+  "descripcion": "Valida desde la geología lo que el matemático validó desde el cálculo.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 20,
+  "pruebas": [
+   "tests/test_horizon_los.py",
+   "docs/validation/rev-geologo.md"
+  ]
+ },
+ {
+  "id": "T-041",
+  "titulo": "Calibración de umbrales y pesos del score",
+  "fase": "F3",
+  "rol": "experto-proyectos-espaciales",
+  "ficheros": [
+   "config/score.yaml",
+   "docs/validation/calibracion-score.md"
+  ],
+  "depende_de": [
+   "T-039",
+   "T-040",
+   "T-037",
+   "T-038"
+  ],
+  "horas": 4,
+  "aceptacion": "Cada umbral y peso con justificación o etiqueta `a calibrar`; los 3 sitios con perfil lander_solar dan resultados defendibles (el interior de Shackleton no puntúa como buen sitio solar); informe de lo que sigue sin calibrar.",
+  "requisitos": [
+   "RF-27",
+   "RF-28",
+   "RF-29",
+   "RNF-05"
+  ],
+  "ola": 11,
+  "descripcion": "Mat. §9.3: los umbrales requieren experto de misión.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 2,
+  "pruebas": [
+   "docs/validation/calibracion-score.md"
+  ]
+ },
+ {
+  "id": "T-042",
+  "titulo": "Investigación UX: personas, flujos y criterios de usabilidad",
+  "fase": "F4",
+  "rol": "UX Researcher",
+  "ficheros": [
+   "docs/plan/ux-flujos.md"
+  ],
+  "depende_de": [],
+  "horas": 4,
+  "aceptacion": "Personas (planificador, educador/público, ingeniero), 3 tareas de usuario por persona con criterio de éxito medible, mapa de pantallas A–D + paneles, requisitos de accesibilidad y de lenguaje; sin código.",
+  "requisitos": [
+   "RF-42",
+   "RNF-06"
+  ],
+  "ola": 1,
+  "descripcion": "Puede empezar desde el minuto 0: no depende del núcleo ni de la puerta G1.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 39,
+  "pruebas": []
+ },
+ {
+  "id": "T-043",
+  "titulo": "Sistema de diseño y paleta accesible",
+  "fase": "F4",
+  "rol": "UI Designer",
+  "ficheros": [
+   "docs/plan/ui-design.md",
+   "ui/theme.py",
+   ".streamlit/config.toml"
+  ],
+  "depende_de": [
+   "T-042"
+  ],
+  "horas": 4,
+  "aceptacion": "Tokens de color con contraste ≥ 4,5:1 documentado; paleta apta para daltonismo para Sol/Tierra/paneles/estados; tema oscuro; ningún estado codificado solo por color; `ui/theme.py` sin lógica científica.",
+  "requisitos": [
+   "RNF-06",
+   "RF-44"
+  ],
+  "ola": 2,
+  "descripcion": "Define colores de Sol, Tierra, solape, ABIERTO, gates y confianza.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 39,
+  "pruebas": []
+ },
+ {
+  "id": "T-044",
+  "titulo": "Esqueleto de la app, navegación, estado e i18n",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "app.py",
+   "ui/state.py",
+   "ui/layout.py",
+   "ui/i18n.py",
+   "ui/strings/es.json",
+   "ui/strings/en.json",
+   "tests/test_i18n.py"
+  ],
+  "depende_de": [
+   "T-043",
+   "T-020",
+   "T-026"
+  ],
+  "horas": 7,
+  "aceptacion": "`streamlit run app.py` arranca y descubre `ui/pages/*.py`; estado compartido (sitio, punto, fechas, panel, perfil) en `ui/state.py`; `ui/i18n.py` con es por defecto; mismas claves en es y en (test); glosario ≥ 15 términos.",
+  "requisitos": [
+   "RF-42",
+   "RNF-07",
+   "RNF-09"
+  ],
+  "ola": 10,
+  "descripcion": "Solo `app.py` y `ui/` importan streamlit.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": [
+   "tests/test_i18n.py"
+  ]
+ },
+ {
+  "id": "T-045",
+  "titulo": "Validación de entradas: coordenadas y fechas",
+  "fase": "F4",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "src/lsi/data/validation.py",
+   "tests/test_validation_inputs.py"
+  ],
+  "depende_de": [
+   "T-020",
+   "T-008",
+   "T-005",
+   "T-014"
+  ],
+  "horas": 3,
+  "aceptacion": "Latitud/longitud validadas; fecha fuera de 1900–2050 → mensaje claro; punto fuera de DEM → modo esfera lisa con aviso; lat/lon `null` rechazados; intervalo máximo configurable.",
+  "requisitos": [
+   "RF-16",
+   "RF-17"
+  ],
+  "ola": 9,
+  "descripcion": "Lógica de validación testeable sin Streamlit.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 21,
+  "pruebas": [
+   "tests/test_validation_inputs.py"
+  ]
+ },
+ {
+  "id": "T-046",
+  "titulo": "Componentes de selección de sitio, coordenadas y fecha",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "ui/components/site_picker.py",
+   "ui/components/time_controls.py"
+  ],
+  "depende_de": [
+   "T-045",
+   "T-044"
+  ],
+  "horas": 4,
+  "aceptacion": "Selector curado + lat/lon personalizadas; fecha/hora/intervalo/paso y presets de días lunares; errores traducidos; el punto de observación se guarda en el estado compartido.",
+  "requisitos": [
+   "RF-15",
+   "RF-16",
+   "RF-17"
+  ],
+  "ola": 11,
+  "descripcion": "Reutilizado por todas las páginas.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 0,
+  "pruebas": []
+ },
+ {
+  "id": "T-047",
+  "titulo": "Modos de usuario, glosario y avisos de alcance",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "ui/components/modes.py",
+   "ui/components/disclaimers.py"
+  ],
+  "depende_de": [
+   "T-044",
+   "T-042"
+  ],
+  "horas": 4,
+  "aceptacion": "Selector de modo (público/planificador/ingeniero) que cambia nivel de detalle sin cambiar datos; avisos «visibilidad geométrica ≠ potencia ≠ enlace RF» y etiquetas `a verificar`/`suposición` reutilizables; tooltips con glosario.",
+  "requisitos": [
+   "RF-42",
+   "RF-44",
+   "RNF-05"
+  ],
+  "ola": 11,
+  "descripcion": "Los avisos son componentes, no texto repetido a mano.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": []
+ },
+ {
+  "id": "T-048",
+  "titulo": "Visualización: terreno 3D y mapa 2D",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "src/lsi/visualization/lunar_map.py",
+   "tests/test_lunar_map.py"
+  ],
+  "depende_de": [
+   "T-009",
+   "T-043",
+   "T-020",
+   "T-010"
+  ],
+  "horas": 6,
+  "aceptacion": "Figura 3D con relieve y escala legible y marcador del observador; capas elevación/pendiente/incertidumbre/ldec; mapa 2D con hillshade; no importa streamlit; test comprueba tipo de figura, número de trazas y rangos.",
+  "requisitos": [
+   "RF-35",
+   "RF-36",
+   "RF-05"
+  ],
+  "ola": 9,
+  "descripcion": "Submuestreo del recorte para mantener la interactividad.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 23,
+  "pruebas": [
+   "tests/test_lunar_map.py"
+  ]
+ },
+ {
+  "id": "T-049",
+  "titulo": "Visualización: perfil de horizonte polar y cartesiano",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "src/lsi/visualization/horizon_chart.py",
+   "tests/test_horizon_chart.py"
+  ],
+  "depende_de": [
+   "T-043",
+   "T-020",
+   "T-012",
+   "T-021"
+  ],
+  "horas": 5,
+  "aceptacion": "Perfil polar y cartesiano con Sol y Tierra marcados y su estado (visible/parcial/bloqueado); sectores ABIERTO rayados con leyenda «horizonte truncado»; texto alternativo en cada figura; test de trazas.",
+  "requisitos": [
+   "RF-37",
+   "RF-07",
+   "RNF-06"
+  ],
+  "ola": 9,
+  "descripcion": "Los marcadores no dependen solo del color.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 24,
+  "pruebas": [
+   "tests/test_horizon_chart.py"
+  ]
+ },
+ {
+  "id": "T-050",
+  "titulo": "Visualización: timeline y curva de potencia",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "src/lsi/visualization/timeline_chart.py",
+   "tests/test_timeline_chart.py"
+  ],
+  "depende_de": [
+   "T-033",
+   "T-043",
+   "T-020",
+   "T-032",
+   "T-022"
+  ],
+  "horas": 5,
+  "aceptacion": "Bandas Sol/Tierra/solape con duración y mayor ventana; curva de % potencia por panel y % de carga; marcador de sunset/Earthset con cuenta atrás; zoom en transiciones; test de trazas.",
+  "requisitos": [
+   "RF-38",
+   "RF-21",
+   "RF-24",
+   "RF-14"
+  ],
+  "ola": 9,
+  "descripcion": "Incluye aviso de visibilidad geométrica en la propia figura.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 18,
+  "pruebas": [
+   "tests/test_timeline_chart.py"
+  ]
+ },
+ {
+  "id": "T-051",
+  "titulo": "Visualización: comparación, score y paneles",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "src/lsi/visualization/comparison.py",
+   "tests/test_comparison_chart.py"
+  ],
+  "depende_de": [
+   "T-043",
+   "T-020",
+   "T-036",
+   "T-037",
+   "T-038"
+  ],
+  "horas": 5,
+  "aceptacion": "Comparación lado a lado de 3 sitios; barras de contribución del score con rango y eslabón débil; comparación de paneles; test de trazas y de orden estable.",
+  "requisitos": [
+   "RF-41",
+   "RF-25",
+   "RF-32"
+  ],
+  "ola": 11,
+  "descripcion": "El gráfico muestra componentes, pesos y penalizaciones, no solo un número.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 1,
+  "pruebas": [
+   "tests/test_comparison_chart.py"
+  ]
+ },
+ {
+  "id": "T-052",
+  "titulo": "Exportación CSV/JSON",
+  "fase": "F4",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "src/lsi/analysis/export.py",
+   "tests/test_export.py"
+  ],
+  "depende_de": [
+   "T-037",
+   "T-026"
+  ],
+  "horas": 3,
+  "aceptacion": "JSON con ida y vuelta sin pérdida; CSV con cabecera de metadatos (DEM, kernels, parámetros) y avisos de alcance; test con resultado sintético.",
+  "requisitos": [
+   "RF-43",
+   "RNF-11"
+  ],
+  "ola": 10,
+  "descripcion": "Cierra el requisito de descarga de resumen del documento base.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 7,
+  "pruebas": [
+   "tests/test_export.py"
+  ]
+ },
+ {
+  "id": "T-053",
+  "titulo": "Página Lunar Explorer (pantalla A)",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "ui/pages/1_explorer.py"
+  ],
+  "depende_de": [
+   "T-047",
+   "T-046",
+   "T-048"
+  ],
+  "horas": 4,
+  "aceptacion": "Muestra 3D, mapa 2D, capas conmutables, coordenadas y metadatos del raster, selección del punto y altura (1/2/5 m); avisos visibles; se carga sin error con los 3 sitios.",
+  "requisitos": [
+   "RF-35",
+   "RF-36",
+   "RF-44"
+  ],
+  "ola": 12,
+  "descripcion": "Primera pantalla de la demo.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 1,
+  "pruebas": []
+ },
+ {
+  "id": "T-054",
+  "titulo": "Página Horizon & Visibility (pantalla B)",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "ui/pages/2_horizon.py"
+  ],
+  "depende_de": [
+   "T-047",
+   "T-026",
+   "T-046",
+   "T-049"
+  ],
+  "horas": 4,
+  "aceptacion": "Perfil de horizonte, Sol/Tierra en az/el, estado de visibilidad, control de fecha/hora con paso; truncado señalizado.",
+  "requisitos": [
+   "RF-37",
+   "RF-44"
+  ],
+  "ola": 12,
+  "descripcion": "Segunda pantalla de la demo.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 1,
+  "pruebas": []
+ },
+ {
+  "id": "T-055",
+  "titulo": "Página Mission Timeline con animación (pantalla C)",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "ui/pages/3_timeline.py",
+   "ui/components/player.py"
+  ],
+  "depende_de": [
+   "T-047",
+   "T-046",
+   "T-050"
+  ],
+  "horas": 5,
+  "aceptacion": "Bandas, ventanas, cuenta atrás hasta sunset/Earthset, zoom; reproductor play/pausa/velocidad que mueve el instante compartido; aviso geométrico visible.",
+  "requisitos": [
+   "RF-38",
+   "RF-39",
+   "RF-14",
+   "RF-44"
+  ],
+  "ola": 12,
+  "descripcion": "El reproductor es un componente reutilizable.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 0,
+  "pruebas": []
+ },
+ {
+  "id": "T-056",
+  "titulo": "Página Paneles y potencia",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "ui/pages/4_panels.py"
+  ],
+  "depende_de": [
+   "T-047",
+   "T-028",
+   "T-046",
+   "T-051",
+   "T-050"
+  ],
+  "horas": 5,
+  "aceptacion": "Selector multi-panel y montaje; parámetros editables con su etiqueta de confianza; curvas de % potencia y % carga a lo largo del día para el sitio elegido; comparación entre paneles; aviso «estimación con supuestos».",
+  "requisitos": [
+   "RF-40",
+   "RF-19",
+   "RF-20",
+   "RF-21",
+   "RF-23",
+   "RF-24",
+   "RF-25",
+   "RF-44"
+  ],
+  "ola": 12,
+  "descripcion": "Interfaz de la funcionalidad nueva 1 del usuario.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 0,
+  "pruebas": []
+ },
+ {
+  "id": "T-057",
+  "titulo": "Página Comparación y Score (pantalla D)",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "ui/pages/5_comparison.py"
+  ],
+  "depende_de": [
+   "T-041",
+   "T-052",
+   "T-047",
+   "T-046",
+   "T-051"
+  ],
+  "horas": 5,
+  "aceptacion": "Tres sitios lado a lado con indicadores separados; perfil y pesos editables con efecto inmediato; score con rango, confianza, gates y desglose; descarga CSV/JSON.",
+  "requisitos": [
+   "RF-41",
+   "RF-29",
+   "RF-30",
+   "RF-31",
+   "RF-32",
+   "RF-43",
+   "RF-44"
+  ],
+  "ola": 12,
+  "descripcion": "Interfaz de la funcionalidad nueva 2 del usuario.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": []
+ },
+ {
+  "id": "T-058",
+  "titulo": "Gazetteer: descarga, carga, búsqueda difusa y sitio evaluable",
+  "fase": "F4",
+  "rol": "Data Engineer",
+  "ficheros": [
+   "src/lsi/data/gazetteer.py",
+   "src/lsi/data/evaluable.py",
+   "tests/test_gazetteer.py",
+   "tests/test_evaluable.py",
+   "scripts/fetch_gazetteer.py",
+   "config/gazetteer_manifest.json",
+   "tests/test_fetch_gazetteer.py"
+  ],
+  "depende_de": [
+   "T-009",
+   "T-001",
+   "T-005"
+  ],
+  "horas": 9,
+  "aceptacion": "`load_gazetteer(path)`, `search(query, feature_types=None, region=None, limit=20)` y `get_by_name(name)` con normalización sin acentos y difflib: «shackelton» encuentra Shackleton, «De Gerlache» y «de gerlache» coinciden, resultados ordenados por puntuación estable y limitados; `to_evaluable_site(entry)` devuelve sitio con DEM si lat/lon→x,y cae dentro de la cobertura de un GeoTIFF (Shackleton, de Gerlache, Malapert verificados con casos dentro/fuera/borde) o sitio `esfera_lisa` con la etiqueta «sin datos de terreno». `python scripts/fetch_gazetteer.py` genera `data/processed/gazetteer.csv` (columnas name, clean_name, feature_type, lat, lon, diameter_km, origin, approval, quad) desde la fuente IAU/USGS registrada en el manifiesto; lon en este-positivo; idempotente; modo `--offline` no falla; el CSV no entra en git (`.gitignore` de T-env lo excluye); fuente y fecha de descarga quedan registradas.",
+  "requisitos": [
+   "RF-02",
+   "RF-16",
+   "RF-47",
+   "RF-48",
+   "RNF-10",
+   "RNF-13"
+  ],
+  "ola": 5,
+  "descripcion": "Reutiliza proyección y cobertura de T-proj/T-dem; sin dependencias nuevas (difflib de la stdlib). Datos fuera de git. El esquema de `GazetteerEntry` lo fija el Software Architect en `contracts.py`; esta tarea lo respeta.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 38,
+  "pruebas": [
+   "tests/test_gazetteer.py",
+   "tests/test_evaluable.py",
+   "tests/test_fetch_gazetteer.py"
+  ]
+ },
+ {
+  "id": "T-059",
+  "titulo": "Pantalla Buscador (ui/search.py)",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "ui/search.py",
+   "ui/pages/0_buscador.py"
+  ],
+  "depende_de": [
+   "T-020",
+   "T-058",
+   "T-047",
+   "T-044"
+  ],
+  "horas": 4,
+  "aceptacion": "Caja de búsqueda con resultados (nombre, tipo, lat/lon, diámetro, origen); filtro por tipo y región; al elegir una entrada se escribe en el estado compartido (`ui/state.py`, mismo sitio/punto que usan Explorer, Horizon, Timeline, Paneles y Comparación); si es sin DEM muestra aviso «sin datos de terreno / modo esfera lisa»; sin resultados muestra sugerencias.",
+  "requisitos": [
+   "RF-47",
+   "RF-48",
+   "RF-44",
+   "RNF-06"
+  ],
+  "ola": 12,
+  "descripcion": "Comparte estado con el resto de pantallas mediante `ui/state.py` (propiedad de T-shell).",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 1,
+  "pruebas": []
+ },
+ {
+  "id": "T-060",
+  "titulo": "Integración final: app.py, caché y rendimiento percibido",
+  "fase": "F4",
+  "rol": "Frontend Developer",
+  "ficheros": [
+   "app.py"
+  ],
+  "depende_de": [
+   "T-057",
+   "T-053",
+   "T-054",
+   "T-056",
+   "T-055",
+   "T-059"
+  ],
+  "horas": 3,
+  "aceptacion": "Navegación completa A–D + paneles; `st.cache_data` en resultados del runner; cambiar fecha, panel o pesos con caché responde ≤ 2 s; indicador de progreso en cálculos largos; sin excepciones en consola.",
+  "requisitos": [
+   "RNF-02",
+   "RF-35",
+   "RF-37",
+   "RF-38",
+   "RF-40",
+   "RF-41"
+  ],
+  "ola": 13,
+  "descripcion": "Modifica `app.py` creado en T-shell (mismo responsable, dependencia explícita).",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": []
+ },
+ {
+  "id": "T-061",
+  "titulo": "Revisión matemática independiente del núcleo, potencia y score",
+  "fase": "F5",
+  "rol": "matematico",
+  "ficheros": [
+   "tests/test_math_golden.py",
+   "tests/test_score_properties.py",
+   "docs/validation/rev-matematico.md"
+  ],
+  "depende_de": [
+   "T-015",
+   "T-011",
+   "T-031",
+   "T-008",
+   "T-037",
+   "T-022",
+   "T-021"
+  ],
+  "horas": 6,
+  "aceptacion": "≥ 12 casos recalculados sin reutilizar código del motor (proyección, horizonte, fracción de disco, ventanas, P_rel, batería, score); tolerancias de Mat. §8.1; propiedades del score: monotonía, continuidad, elasticidad w_i; discrepancias documentadas.",
+  "requisitos": [
+   "RNF-08",
+   "RNF-10",
+   "RF-03",
+   "RF-06",
+   "RF-10",
+   "RF-12",
+   "RF-20",
+   "RF-29"
+  ],
+  "ola": 10,
+  "descripcion": "El oráculo es independiente del motor (requisito RNF-10).",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 16,
+  "pruebas": [
+   "tests/test_math_golden.py",
+   "tests/test_score_properties.py",
+   "docs/validation/rev-matematico.md"
+  ]
+ },
+ {
+  "id": "T-062",
+  "titulo": "Casos de validación del experto en la Luna",
+  "fase": "F5",
+  "rol": "experto-luna",
+  "ficheros": [
+   "tests/test_luna_cases.py",
+   "docs/validation/rev-experto-luna.md"
+  ],
+  "depende_de": [
+   "T-016",
+   "T-013",
+   "T-022"
+  ],
+  "horas": 5,
+  "aceptacion": "Reproduce la tabla de `luna-spice-sitios.md` §5: Tierra sobre horizonte a −89,9° = 47,0 % ± 1 pp; periodo de libración 27,22 ± 0,3 d; rotación sinódica 29,5305 ± 0,01 d; eclipse 2026-03-03 ±10 min; fecha fuera de rango → excepción.",
+  "requisitos": [
+   "RF-09",
+   "RF-12",
+   "RF-14",
+   "RNF-08"
+  ],
+  "ola": 8,
+  "descripcion": "Valida física del polo sur con valores independientes del código.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 35,
+  "pruebas": [
+   "tests/test_luna_cases.py",
+   "docs/validation/rev-experto-luna.md"
+  ]
+ },
+ {
+  "id": "T-063",
+  "titulo": "Contraste completo con Horizons y informe",
+  "fase": "F5",
+  "rol": "API Tester",
+  "ficheros": [
+   "scripts/run_horizons_validation.py",
+   "docs/validation/validacion-horizons.md",
+   "tests/data/horizons_cases.json"
+  ],
+  "depende_de": [
+   "T-019",
+   "T-018"
+  ],
+  "horas": 4,
+  "aceptacion": "≥ 12 instantes × 3 sitios × 2 cuerpos, incluidos libración extrema (±6,8°) y Sol < 1° de elevación; tabla de error máximo/medio por sitio y cuerpo en grados; dentro de tolerancia o desviación explicada (DE421 vs DE441, marco ME vs PA de Horizons).",
+  "requisitos": [
+   "RF-09",
+   "RNF-08",
+   "RNF-11"
+  ],
+  "ola": 8,
+  "descripcion": "Amplía `horizons_cases.json` creado en T-hzcases.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 43,
+  "pruebas": [
+   "docs/validation/validacion-horizons.md"
+  ]
+ },
+ {
+  "id": "T-064",
+  "titulo": "Regresión dorada de los tres sitios",
+  "fase": "F5",
+  "rol": "Test Results Analyzer",
+  "ficheros": [
+   "tests/test_regression_sites.py",
+   "tests/data/golden_sites.json"
+  ],
+  "depende_de": [
+   "T-037",
+   "T-026"
+  ],
+  "horas": 4,
+  "aceptacion": "Métricas y score de Site04/11/23 (punto, fecha y paso fijos) congelados con tolerancia declarada; un cambio fuera de tolerancia falla; se documenta cómo regenerar el oro y quién lo aprueba.",
+  "requisitos": [
+   "RNF-03",
+   "RF-13",
+   "RF-29",
+   "RNF-10"
+  ],
+  "ola": 10,
+  "descripcion": "Protege contra regresiones silenciosas de marcos o de horizonte.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 23,
+  "pruebas": [
+   "tests/test_regression_sites.py"
+  ]
+ },
+ {
+  "id": "T-065",
+  "titulo": "Benchmarks de rendimiento",
+  "fase": "F5",
+  "rol": "API Tester",
+  "ficheros": [
+   "scripts/benchmark.py",
+   "tests/test_performance.py",
+   "docs/validation/rendimiento.md"
+  ],
+  "depende_de": [
+   "T-032",
+   "T-026",
+   "T-060"
+  ],
+  "horas": 4,
+  "aceptacion": "Mide horizonte de 1 punto, timeline de 30 y 365 días, curvas de 3 paneles, memoria de pico y respuesta de la UI con caché; compara con RNF-01/02/12 (objetivos); informe con tiempos reales y cuellos de botella.",
+  "requisitos": [
+   "RNF-01",
+   "RNF-02",
+   "RNF-12"
+  ],
+  "ola": 14,
+  "descripcion": "Los presupuestos son objetivos a medir, no cifras ya verificadas.",
+  "prioridad": "Should",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": [
+   "tests/test_performance.py",
+   "docs/validation/rendimiento.md"
+  ]
+ },
+ {
+  "id": "T-066",
+  "titulo": "Optimización condicional del rendimiento",
+  "fase": "F5",
+  "rol": "Backend Architect",
+  "ficheros": [
+   "src/lsi/terrain/horizon.py",
+   "src/lsi/simulation/cache.py"
+  ],
+  "depende_de": [
+   "T-065"
+  ],
+  "horas": 5,
+  "aceptacion": "Solo si T-bench incumple RNF-01/02: reduce tiempos hasta cumplir sin cambiar resultados (los tests de horizonte y la regresión siguen pasando); si cumple, la tarea se cierra sin cambios.",
+  "requisitos": [
+   "RNF-01",
+   "RNF-02",
+   "RNF-03"
+  ],
+  "ola": 15,
+  "descripcion": "Contingencia planificada; modifica ficheros de T-horizon y T-runner (dependencia explícita).",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": []
+ },
+ {
+  "id": "T-067",
+  "titulo": "Determinismo y reproducibilidad en entorno limpio",
+  "fase": "F5",
+  "rol": "API Tester",
+  "ficheros": [
+   "tests/test_determinism.py",
+   "scripts/clean_env_check.sh"
+  ],
+  "depende_de": [
+   "T-002",
+   "T-003",
+   "T-026"
+  ],
+  "horas": 3,
+  "aceptacion": "Dos ejecuciones idénticas dan métricas iguales bit a bit; `clean_env_check.sh` crea venv limpio, instala, verifica datos, ejecuta pytest y arranca la app en modo de prueba; falla con mensaje si algo falta.",
+  "requisitos": [
+   "RNF-03",
+   "RNF-04"
+  ],
+  "ola": 10,
+  "descripcion": "Evidencia del checklist de entrega «arranca desde un entorno limpio».",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 25,
+  "pruebas": [
+   "tests/test_determinism.py"
+  ]
+ },
+ {
+  "id": "T-068",
+  "titulo": "Pruebas E2E de la app (AppTest)",
+  "fase": "F5",
+  "rol": "API Tester",
+  "ficheros": [
+   "tests/test_app_smoke.py"
+  ],
+  "depende_de": [
+   "T-060"
+  ],
+  "horas": 4,
+  "aceptacion": "Con `streamlit.testing.v1.AppTest` cada página carga sin excepción para Site04, y los flujos coordenada personalizada, cambio de panel y cambio de pesos producen resultados; fecha fuera de rango muestra error de usuario, no traza.",
+  "requisitos": [
+   "RF-35",
+   "RF-37",
+   "RF-38",
+   "RF-40",
+   "RF-41",
+   "RNF-10"
+  ],
+  "ola": 14,
+  "descripcion": "Cubre E2E sin navegador.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 5,
+  "pruebas": [
+   "tests/test_app_smoke.py"
+  ]
+ },
+ {
+  "id": "T-069",
+  "titulo": "QA visual y de accesibilidad con capturas",
+  "fase": "F5",
+  "rol": "Evidence Collector",
+  "ficheros": [
+   "scripts/qa_screenshots.py",
+   "docs/validation/qa-visual.md",
+   "docs/assets/screenshots/README.md"
+  ],
+  "depende_de": [
+   "T-060"
+  ],
+  "horas": 5,
+  "aceptacion": "Capturas Playwright de las 5 pantallas en ≥ 2 sitios con datos reales; lista de defectos con evidencia y severidad (mínimo 3 hallazgos buscados); checklist WCAG 2.1 AA (contraste, teclado, texto alternativo, no solo color) y 3 tareas por persona.",
+  "requisitos": [
+   "RNF-06",
+   "RF-35",
+   "RF-36",
+   "RF-37",
+   "RF-38",
+   "RF-40",
+   "RF-41",
+   "RF-42"
+  ],
+  "ola": 14,
+  "descripcion": "Nada se da por bueno sin captura.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 4,
+  "pruebas": [
+   "docs/validation/qa-visual.md"
+  ]
+ },
+ {
+  "id": "T-070",
+  "titulo": "Revisión de código del núcleo y de la UI",
+  "fase": "F5",
+  "rol": "Code Reviewer",
+  "ficheros": [
+   "tests/test_architecture_imports.py",
+   "docs/validation/code-review.md"
+  ],
+  "depende_de": [
+   "T-061",
+   "T-060"
+  ],
+  "horas": 5,
+  "aceptacion": "Test AST: nada de streamlit fuera de `app.py`/`ui/`, nada de plotly en el núcleo; informe con hallazgos P0/P1/P2 sobre corrección, mantenibilidad, seguridad y rendimiento; P0/P1 resueltos o aceptados por escrito.",
+  "requisitos": [
+   "RNF-09",
+   "RNF-10",
+   "RNF-05"
+  ],
+  "ola": 14,
+  "descripcion": "Revisión centrada en corrección, no en estilo.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 4,
+  "pruebas": [
+   "tests/test_architecture_imports.py",
+   "docs/validation/code-review.md"
+  ]
+ },
+ {
+  "id": "T-071",
+  "titulo": "Revisión final por experto en proyectos espaciales: potencia y textos UI",
+  "fase": "F5",
+  "rol": "experto-proyectos-espaciales",
+  "ficheros": [
+   "docs/validation/rev-expertos-final.md"
+  ],
+  "depende_de": [
+   "T-033",
+   "T-032",
+   "T-060"
+  ],
+  "horas": 4,
+  "aceptacion": "Ninguna afirmación de potencia o enlace sin aviso; hipótesis del modelo declaradas; parámetros `a verificar` visibles en la UI; comprobación de la lista «qué NO decir» en UI, README y guion.",
+  "requisitos": [
+   "RNF-05",
+   "RF-44",
+   "RF-20"
+  ],
+  "ola": 14,
+  "descripcion": "Cierra el bucle con el experto que verificó el catálogo.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 5,
+  "pruebas": [
+   "docs/validation/rev-expertos-final.md"
+  ]
+ },
+ {
+  "id": "T-072",
+  "titulo": "Ventana de correcciones tras revisiones (2–3 ciclos)",
+  "fase": "F5",
+  "rol": "Frontend Developer",
+  "ficheros": [],
+  "depende_de": [
+   "T-067",
+   "T-071",
+   "T-040",
+   "T-063",
+   "T-062",
+   "T-061",
+   "T-066",
+   "T-064",
+   "T-070",
+   "T-068",
+   "T-069"
+  ],
+  "horas": 8,
+  "aceptacion": "Todos los hallazgos P0/P1 de las revisiones cerrados con evidencia; suite completa en verde; ficheros a tocar los fija cada hallazgo y se serializan por fichero (sin tareas paralelas en esta ventana).",
+  "requisitos": [
+   "RNF-10",
+   "RNF-05",
+   "RNF-08"
+  ],
+  "ola": 16,
+  "descripcion": "Buffer realista: la primera implementación suele necesitar 2–3 ciclos de revisión.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": []
+ },
+ {
+  "id": "T-073",
+  "titulo": "Informe consolidado de pruebas y cobertura",
+  "fase": "F5",
+  "rol": "Test Results Analyzer",
+  "ficheros": [
+   "docs/validation/informe-pruebas.md"
+  ],
+  "depende_de": [
+   "T-072"
+  ],
+  "horas": 3,
+  "aceptacion": "Total de tests, fallos conocidos, cobertura por paquete y matriz requisito→prueba comprobada contra `requisitos.md`; lista de requisitos Must sin prueba (debe ser vacía).",
+  "requisitos": [
+   "RNF-10"
+  ],
+  "ola": 17,
+  "descripcion": "Entrada de la puerta final.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": [
+   "docs/validation/informe-pruebas.md"
+  ]
+ },
+ {
+  "id": "T-074",
+  "titulo": "Puerta final G5: Reality Check",
+  "fase": "F5",
+  "rol": "Reality Checker",
+  "ficheros": [
+   "docs/validation/reality-check.md"
+  ],
+  "depende_de": [
+   "T-073"
+  ],
+  "horas": 3,
+  "aceptacion": "Veredicto GO/NEEDS WORK con evidencia reproducible para los 7 criterios de aceptación del MVP del documento base y para las dos funcionalidades nuevas; NEEDS WORK por defecto.",
+  "requisitos": [
+   "RNF-05",
+   "RNF-04"
+  ],
+  "ola": 18,
+  "descripcion": "Certificación basada en pruebas, no en afirmaciones.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": [
+   "docs/validation/reality-check.md"
+  ]
+ },
+ {
+  "id": "T-075",
+  "titulo": "Documento de metodología",
+  "fase": "F6",
+  "rol": "Technical Writer",
+  "ficheros": [
+   "docs/methodology.md"
+  ],
+  "depende_de": [
+   "T-012",
+   "T-032",
+   "T-037",
+   "T-022"
+  ],
+  "horas": 5,
+  "aceptacion": "Explica transformación de coordenadas, horizonte con curvatura, efemérides, ventanas, modelo de potencia, score y confianza con fórmulas y fuentes; cada convención enlaza a `convenciones.md`; revisado por el matemático (comentarios resueltos).",
+  "requisitos": [
+   "RF-44",
+   "RNF-05"
+  ],
+  "ola": 10,
+  "descripcion": "Parte del README exigido por el documento base.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 32,
+  "pruebas": []
+ },
+ {
+  "id": "T-076",
+  "titulo": "Fuentes de datos, licencias y limitaciones conocidas",
+  "fase": "F6",
+  "rol": "Technical Writer",
+  "ficheros": [
+   "docs/data_sources.md",
+   "docs/limitations.md"
+  ],
+  "depende_de": [
+   "T-041",
+   "T-007",
+   "T-003",
+   "T-012",
+   "T-032",
+   "T-027"
+  ],
+  "horas": 5,
+  "aceptacion": "URLs exactas de DEM, capas, kernels y datos de paneles; versión de kernels; condiciones de uso verificadas o marcadas `a verificar`; cómo reproducir cada descarga. Lista visibilidad geométrica ≠ potencia ≠ RF, DEM finito (sesgo optimista), resolución efectiva ≈ 30 m, eclipses lunares no modelados, parámetros de panel y umbrales de score a verificar/calibrar.",
+  "requisitos": [
+   "RF-44",
+   "RNF-05",
+   "RNF-13"
+  ],
+  "ola": 12,
+  "descripcion": "Checklist de entrega: procedencia y licencia verificadas. Honestidad del alcance.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 24,
+  "pruebas": []
+ },
+ {
+  "id": "T-077",
+  "titulo": "Guion de demostración de 3 minutos",
+  "fase": "F6",
+  "rol": "Technical Writer",
+  "ficheros": [
+   "docs/demo-guion.md"
+  ],
+  "depende_de": [
+   "T-071",
+   "T-060"
+  ],
+  "horas": 3,
+  "aceptacion": "Guion cronometrado de 3:00 con acción en pantalla y mensaje: Explorer Site04 → horizonte → timeline → paneles (% de potencia) → comparación y score → incertidumbre y límites; frase de cierre; plan B si falla una pantalla.",
+  "requisitos": [
+   "RF-44",
+   "RF-42"
+  ],
+  "ola": 15,
+  "descripcion": "Incluye las dos funcionalidades nuevas del usuario.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 13,
+  "pruebas": []
+ },
+ {
+  "id": "T-078",
+  "titulo": "README del proyecto",
+  "fase": "F6",
+  "rol": "Technical Writer",
+  "ficheros": [
+   "README.md"
+  ],
+  "depende_de": [
+   "T-067",
+   "T-076",
+   "T-075",
+   "T-069"
+  ],
+  "horas": 4,
+  "aceptacion": "Contiene los 8 elementos del documento base (problema/solución, instalación y ejecución, fuentes, metodología, métricas y reglas, limitaciones, capturas/vídeo, créditos); las instrucciones se prueban con `clean_env_check.sh`.",
+  "requisitos": [
+   "RNF-04",
+   "RNF-05",
+   "RF-44"
+  ],
+  "ola": 15,
+  "descripcion": "Documentación en español con acentos.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 14,
+  "pruebas": []
+ },
+ {
+  "id": "T-079",
+  "titulo": "Capturas finales reales y guion de vídeo",
+  "fase": "F6",
+  "rol": "Evidence Collector",
+  "ficheros": [
+   "docs/assets/screenshots/final/01-explorer.png",
+   "docs/assets/screenshots/final/02-horizon.png",
+   "docs/assets/screenshots/final/03-timeline.png",
+   "docs/assets/screenshots/final/04-panels.png",
+   "docs/assets/screenshots/final/05-comparison.png"
+  ],
+  "depende_de": [
+   "T-077",
+   "T-072"
+  ],
+  "horas": 3,
+  "aceptacion": "5 capturas con datos reales siguiendo el guion; ninguna figura sintética sin etiqueta; resolución legible; coherentes con la versión congelada.",
+  "requisitos": [
+   "RF-44",
+   "RNF-05"
+  ],
+  "ola": 17,
+  "descripcion": "El vídeo lo graba una persona con el guion; se entrega la secuencia de capturas.",
+  "prioridad": "Must",
+  "ruta_critica": false,
+  "holgura_h": 3,
+  "pruebas": []
+ },
+ {
+  "id": "T-080",
+  "titulo": "Checklist de entrega y envío",
+  "fase": "F6",
+  "rol": "Reality Checker",
+  "ficheros": [
+   "docs/entrega-checklist.md"
+  ],
+  "depende_de": [
+   "T-067",
+   "T-078",
+   "T-074",
+   "T-079"
+  ],
+  "horas": 2,
+  "aceptacion": "Checklist firmado: arranca desde entorno limpio, repo sin archivos grandes, capturas reales, README completo, vídeo, envío realizado con ≥ 2 h de margen sobre el cierre (dom 15/11 23:59 Madrid).",
+  "requisitos": [
+   "RNF-04",
+   "RNF-13",
+   "RNF-05"
+  ],
+  "ola": 19,
+  "descripcion": "Última tarea de la ruta.",
+  "prioridad": "Must",
+  "ruta_critica": true,
+  "holgura_h": 0,
+  "pruebas": []
+ }
+]

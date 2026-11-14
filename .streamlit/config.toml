@@ -1,0 +1,14 @@
+# Tema oscuro espacial (misma paleta que src/lsi/visualization/theme.py; contraste >= 4,5:1 sobre el fondo).
+[theme]
+base = "dark"
+primaryColor = "#56b4e9"
+backgroundColor = "#0b1020"
+secondaryBackgroundColor = "#121a33"
+textColor = "#e8ecf5"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"

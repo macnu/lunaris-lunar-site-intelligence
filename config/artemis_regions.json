@@ -1,0 +1,577 @@
+{
+ "_nota": "Regiones candidatas Artemis III. Lista de 13 (NASA, release 22-089, 19-ago-2022) + las 4 que SOLO figuran en la de nueve (RELEASE24-136, oct-2024). lon este-positiva 0..360, lat planetocéntrica, MOON_ME. caja = huella del SDEM (mayor que los 15 km oficiales). Regenerar: python scripts/fetch_imagery.py --regions --yes",
+ "fuentes": [
+  "https://www.nasa.gov/news-release/nasa-identifies-candidate-regions-for-landing-next-americans-on-moon/",
+  "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/",
+  "https://zenodo.org/records/17954508"
+ ],
+ "generado": "2026-11-14T20:24:05+00:00",
+ "bytes_leidos": 7951064,
+ "regions": [
+  {
+   "id": "amundsen_rim",
+   "nombre": "Amundsen Rim",
+   "listas": [
+    "2022"
+   ],
+   "centro_lat_deg": -84.2288,
+   "centro_lon_deg_e": 69.4429,
+   "centro_xy_m": [
+    163997.5,
+    61502.5
+   ],
+   "caja_xy_m": [
+    154000.0,
+    51505.0,
+    173995.0,
+    71500.0
+   ],
+   "caja_lado_km": [
+    20.0,
+    20.0
+   ],
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": "A3CLR22_0_Amundsen_Rim.zip",
+   "sdem_mascara": "A3CLR22_0_Amundsen_Rim/A300_GLDMASK_005.tif",
+   "sdem_px_mascara_m": 15.0,
+   "fuente": "Centro y caja = huella del GLDMASK_005.tif del SDEM (Bertone et al., Zenodo 10.5281/zenodo.17954508, CC-BY-4.0), convertida con stereo_inverse (R = 1737,4 km). NASA no publica coordenadas de las regiones.",
+   "confianza": "derivada de la huella del SDEM; el centro oficial de la región no se publica (±~5 km de incertidumbre respecto al centro nominal de 15 km, a verificar)",
+   "rasgo_cercano": {
+    "nombre": "Oberbeck",
+    "feature_id": 16449,
+    "tipo": "Crater",
+    "distancia_km": 21.0
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "nobile_rim_2",
+   "nombre": "Nobile Rim 2",
+   "listas": [
+    "2022",
+    "2024"
+   ],
+   "centro_lat_deg": -83.954,
+   "centro_lon_deg_e": 58.821,
+   "centro_xy_m": [
+    156997.5,
+    95002.5
+   ],
+   "caja_xy_m": [
+    147000.0,
+    85005.0,
+    166995.0,
+    105000.0
+   ],
+   "caja_lado_km": [
+    20.0,
+    20.0
+   ],
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": "A3CLR22_1_Nobile_Rim_2.zip",
+   "sdem_mascara": "A3CLR22_1_Nobile_Rim_2/A301_GLDMASK_005.tif",
+   "sdem_px_mascara_m": 15.0,
+   "fuente": "Centro y caja = huella del GLDMASK_005.tif del SDEM (Bertone et al., Zenodo 10.5281/zenodo.17954508, CC-BY-4.0), convertida con stereo_inverse (R = 1737,4 km). NASA no publica coordenadas de las regiones.",
+   "confianza": "derivada de la huella del SDEM; el centro oficial de la región no se publica (±~5 km de incertidumbre respecto al centro nominal de 15 km, a verificar)",
+   "rasgo_cercano": {
+    "nombre": "Wapowski",
+    "feature_id": 14541,
+    "tipo": "Crater",
+    "distancia_km": 31.6
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "haworth",
+   "nombre": "Haworth",
+   "listas": [
+    "2022",
+    "2024"
+   ],
+   "centro_lat_deg": -86.7637,
+   "centro_lon_deg_e": 337.2214,
+   "centro_xy_m": [
+    -38005.0,
+    90505.0
+   ],
+   "caja_xy_m": [
+    -52900.0,
+    75610.0,
+    -23110.0,
+    105400.0
+   ],
+   "caja_lado_km": [
+    29.79,
+    29.79
+   ],
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": "A3CLR22_2_Haworth.zip",
+   "sdem_mascara": "A3CLR22_2_Haworth/A302_GLDMASK_005.tif",
+   "sdem_px_mascara_m": 15.0,
+   "fuente": "Centro y caja = huella del GLDMASK_005.tif del SDEM (Bertone et al., Zenodo 10.5281/zenodo.17954508, CC-BY-4.0), convertida con stereo_inverse (R = 1737,4 km). NASA no publica coordenadas de las regiones.",
+   "confianza": "derivada de la huella del SDEM; el centro oficial de la región no se publica (±~5 km de incertidumbre respecto al centro nominal de 15 km, a verificar)",
+   "rasgo_cercano": {
+    "nombre": "Haworth",
+    "feature_id": 14502,
+    "tipo": "Crater",
+    "distancia_km": 33.8
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "faustini_rim_a",
+   "nombre": "Faustini Rim A",
+   "listas": [
+    "2022"
+   ],
+   "centro_lat_deg": -87.8897,
+   "centro_lon_deg_e": 89.9978,
+   "centro_xy_m": [
+    63997.5,
+    2.5
+   ],
+   "caja_xy_m": [
+    54000.0,
+    -9995.0,
+    73995.0,
+    10000.0
+   ],
+   "caja_lado_km": [
+    20.0,
+    20.0
+   ],
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": "A3CLR22_3_Faustini_Rim_A.zip",
+   "sdem_mascara": "A3CLR22_3_Faustini_Rim_A/A303_GLDMASK_005.tif",
+   "sdem_px_mascara_m": 15.0,
+   "fuente": "Centro y caja = huella del GLDMASK_005.tif del SDEM (Bertone et al., Zenodo 10.5281/zenodo.17954508, CC-BY-4.0), convertida con stereo_inverse (R = 1737,4 km). NASA no publica coordenadas de las regiones.",
+   "confianza": "derivada de la huella del SDEM; el centro oficial de la región no se publica (±~5 km de incertidumbre respecto al centro nominal de 15 km, a verificar)",
+   "rasgo_cercano": {
+    "nombre": "Faustini",
+    "feature_id": 1919,
+    "tipo": "Crater",
+    "distancia_km": 22.6
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "de_gerlache_rim_2",
+   "nombre": "de Gerlache Rim 2",
+   "listas": [
+    "2022",
+    "2024"
+   ],
+   "centro_lat_deg": -88.2299,
+   "centro_lon_deg_e": 295.3728,
+   "centro_xy_m": [
+    -48502.5,
+    23002.5
+   ],
+   "caja_xy_m": [
+    -58500.0,
+    13005.0,
+    -38505.0,
+    33000.0
+   ],
+   "caja_lado_km": [
+    20.0,
+    20.0
+   ],
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": "A3CLR22_4_deGerlache_Rim_2.zip",
+   "sdem_mascara": "A3CLR22_4_deGerlache_Rim_2/A304_GLDMASK_005.tif",
+   "sdem_px_mascara_m": 15.0,
+   "fuente": "Centro y caja = huella del GLDMASK_005.tif del SDEM (Bertone et al., Zenodo 10.5281/zenodo.17954508, CC-BY-4.0), convertida con stereo_inverse (R = 1737,4 km). NASA no publica coordenadas de las regiones.",
+   "confianza": "derivada de la huella del SDEM; el centro oficial de la región no se publica (±~5 km de incertidumbre respecto al centro nominal de 15 km, a verificar)",
+   "rasgo_cercano": {
+    "nombre": "de Gerlache",
+    "feature_id": 1439,
+    "tipo": "Crater",
+    "distancia_km": 21.8
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "connecting_ridge_extension",
+   "nombre": "Connecting Ridge Extension",
+   "listas": [
+    "2022"
+   ],
+   "centro_lat_deg": -89.0324,
+   "centro_lon_deg_e": 258.0065,
+   "centro_xy_m": [
+    -28702.5,
+    -6097.5
+   ],
+   "caja_xy_m": [
+    -38700.0,
+    -16095.0,
+    -18705.0,
+    3900.0
+   ],
+   "caja_lado_km": [
+    20.0,
+    20.0
+   ],
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": "A3CLR22_5_Connecting_Ridge_Extension.zip",
+   "sdem_mascara": "A3CLR22_5_Connecting_Ridge_Extension/A305_GLDMASK_005.tif",
+   "sdem_px_mascara_m": 15.0,
+   "fuente": "Centro y caja = huella del GLDMASK_005.tif del SDEM (Bertone et al., Zenodo 10.5281/zenodo.17954508, CC-BY-4.0), convertida con stereo_inverse (R = 1737,4 km). NASA no publica coordenadas de las regiones.",
+   "confianza": "derivada de la huella del SDEM; el centro oficial de la región no se publica (±~5 km de incertidumbre respecto al centro nominal de 15 km, a verificar)",
+   "rasgo_cercano": {
+    "nombre": "Marvin",
+    "feature_id": 16008,
+    "tipo": "Crater",
+    "distancia_km": 7.5
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "connecting_ridge",
+   "nombre": "Connecting Ridge",
+   "listas": [
+    "2022"
+   ],
+   "centro_lat_deg": -89.4632,
+   "centro_lon_deg_e": 222.5353,
+   "centro_xy_m": [
+    -11005.0,
+    -11995.0
+   ],
+   "caja_xy_m": [
+    -19000.0,
+    -19990.0,
+    -3010.0,
+    -4000.0
+   ],
+   "caja_lado_km": [
+    15.99,
+    15.99
+   ],
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": "A3CLR22_6_Connecting_Ridge.zip",
+   "sdem_mascara": "A3CLR22_6_Connecting_Ridge/A306_GLDMASK_005.tif",
+   "sdem_px_mascara_m": 15.0,
+   "fuente": "Centro y caja = huella del GLDMASK_005.tif del SDEM (Bertone et al., Zenodo 10.5281/zenodo.17954508, CC-BY-4.0), convertida con stereo_inverse (R = 1737,4 km). NASA no publica coordenadas de las regiones.",
+   "confianza": "derivada de la huella del SDEM; el centro oficial de la región no se publica (±~5 km de incertidumbre respecto al centro nominal de 15 km, a verificar)",
+   "rasgo_cercano": {
+    "nombre": "Spudis",
+    "feature_id": 16007,
+    "tipo": "Crater",
+    "distancia_km": 13.9
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "nobile_rim_1",
+   "nombre": "Nobile Rim 1",
+   "listas": [
+    "2022",
+    "2024"
+   ],
+   "centro_lat_deg": -85.4381,
+   "centro_lon_deg_e": 37.3652,
+   "centro_xy_m": [
+    83997.5,
+    110002.5
+   ],
+   "caja_xy_m": [
+    74000.0,
+    100005.0,
+    93995.0,
+    120000.0
+   ],
+   "caja_lado_km": [
+    20.0,
+    20.0
+   ],
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": "A3CLR22_7_Nobile_Rim_1.zip",
+   "sdem_mascara": "A3CLR22_7_Nobile_Rim_1/A307_GLDMASK_005.tif",
+   "sdem_px_mascara_m": 15.0,
+   "fuente": "Centro y caja = huella del GLDMASK_005.tif del SDEM (Bertone et al., Zenodo 10.5281/zenodo.17954508, CC-BY-4.0), convertida con stereo_inverse (R = 1737,4 km). NASA no publica coordenadas de las regiones.",
+   "confianza": "derivada de la huella del SDEM; el centro oficial de la región no se publica (±~5 km de incertidumbre respecto al centro nominal de 15 km, a verificar)",
+   "rasgo_cercano": {
+    "nombre": "Masina",
+    "feature_id": 16269,
+    "tipo": "Crater",
+    "distancia_km": 12.6
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "peak_near_shackleton",
+   "nombre": "Peak Near Shackleton",
+   "listas": [
+    "2022"
+   ],
+   "centro_lat_deg": -88.8112,
+   "centro_lon_deg_e": 123.6879,
+   "centro_xy_m": [
+    29995.0,
+    -19995.0
+   ],
+   "caja_xy_m": [
+    22000.0,
+    -27990.0,
+    37990.0,
+    -12000.0
+   ],
+   "caja_lado_km": [
+    15.99,
+    15.99
+   ],
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": "A3CLR22_8_Peak_Near_Shackleton.zip",
+   "sdem_mascara": "A3CLR22_8_Peak_Near_Shackleton/A308_GLDMASK_005.tif",
+   "sdem_px_mascara_m": 15.0,
+   "fuente": "Centro y caja = huella del GLDMASK_005.tif del SDEM (Bertone et al., Zenodo 10.5281/zenodo.17954508, CC-BY-4.0), convertida con stereo_inverse (R = 1737,4 km). NASA no publica coordenadas de las regiones.",
+   "confianza": "derivada de la huella del SDEM; el centro oficial de la región no se publica (±~5 km de incertidumbre respecto al centro nominal de 15 km, a verificar)",
+   "rasgo_cercano": {
+    "nombre": "Slater",
+    "feature_id": 15325,
+    "tipo": "Crater",
+    "distancia_km": 24.3
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "de_gerlache_rim_1",
+   "nombre": "de Gerlache Rim 1",
+   "listas": [
+    "2022"
+   ],
+   "centro_lat_deg": -88.6832,
+   "centro_lon_deg_e": 292.0719,
+   "centro_xy_m": [
+    -37005.0,
+    15005.0
+   ],
+   "caja_xy_m": [
+    -45000.0,
+    7010.0,
+    -29010.0,
+    23000.0
+   ],
+   "caja_lado_km": [
+    15.99,
+    15.99
+   ],
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": "A3CLR22_9_deGerlache_Rim.zip",
+   "sdem_mascara": "A3CLR22_9_deGerlache_Rim/A309_GLDMASK_005.tif",
+   "sdem_px_mascara_m": 15.0,
+   "fuente": "Centro y caja = huella del GLDMASK_005.tif del SDEM (Bertone et al., Zenodo 10.5281/zenodo.17954508, CC-BY-4.0), convertida con stereo_inverse (R = 1737,4 km). NASA no publica coordenadas de las regiones.",
+   "confianza": "derivada de la huella del SDEM; el centro oficial de la región no se publica (±~5 km de incertidumbre respecto al centro nominal de 15 km, a verificar)",
+   "rasgo_cercano": {
+    "nombre": "de Gerlache",
+    "feature_id": 1439,
+    "tipo": "Crater",
+    "distancia_km": 16.3
+   },
+   "dem_lola_5m_sitio": "Site11"
+  },
+  {
+   "id": "leibnitz_beta_plateau",
+   "nombre": "Leibnitz Beta Plateau",
+   "listas": [
+    "2022"
+   ],
+   "centro_lat_deg": -85.4265,
+   "centro_lon_deg_e": 31.7399,
+   "centro_xy_m": [
+    72995.0,
+    118005.0
+   ],
+   "caja_xy_m": [
+    65000.0,
+    110010.0,
+    80990.0,
+    126000.0
+   ],
+   "caja_lado_km": [
+    15.99,
+    15.99
+   ],
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": "A3CLR22_10_Leibnitz_Beta_Plateau.zip",
+   "sdem_mascara": "A3CLR22_10_Leibnitz_Beta_Plateau/A310_GLDMASK_005.tif",
+   "sdem_px_mascara_m": 15.0,
+   "fuente": "Centro y caja = huella del GLDMASK_005.tif del SDEM (Bertone et al., Zenodo 10.5281/zenodo.17954508, CC-BY-4.0), convertida con stereo_inverse (R = 1737,4 km). NASA no publica coordenadas de las regiones.",
+   "confianza": "derivada de la huella del SDEM; el centro oficial de la región no se publica (±~5 km de incertidumbre respecto al centro nominal de 15 km, a verificar)",
+   "rasgo_cercano": {
+    "nombre": "Dawa",
+    "feature_id": 16270,
+    "tipo": "Crater",
+    "distancia_km": 0.7
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "malapert_massif",
+   "nombre": "Malapert Massif",
+   "listas": [
+    "2022",
+    "2024"
+   ],
+   "centro_lat_deg": -85.9948,
+   "centro_lon_deg_e": 359.7642,
+   "centro_xy_m": [
+    -500.0,
+    121500.0
+   ],
+   "caja_xy_m": [
+    -11000.0,
+    111000.0,
+    10000.0,
+    132000.0
+   ],
+   "caja_lado_km": [
+    21.0,
+    21.0
+   ],
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": "A3CLR22_11_Malapert_Massif.zip",
+   "sdem_mascara": "A3CLR22_11_Malapert_Massif/A311_GLDMASK_005.tif",
+   "sdem_px_mascara_m": 15.0,
+   "fuente": "Centro y caja = huella del GLDMASK_005.tif del SDEM (Bertone et al., Zenodo 10.5281/zenodo.17954508, CC-BY-4.0), convertida con stereo_inverse (R = 1737,4 km). NASA no publica coordenadas de las regiones.",
+   "confianza": "derivada de la huella del SDEM; el centro oficial de la región no se publica (±~5 km de incertidumbre respecto al centro nominal de 15 km, a verificar)",
+   "rasgo_cercano": {
+    "nombre": "Mons Malapert",
+    "feature_id": 16338,
+    "tipo": "Mons",
+    "distancia_km": 3.1
+   },
+   "dem_lola_5m_sitio": "Site23"
+  },
+  {
+   "id": "de_gerlache_kocher_massif",
+   "nombre": "de Gerlache-Kocher Massif",
+   "listas": [
+    "2022"
+   ],
+   "centro_lat_deg": -85.8295,
+   "centro_lon_deg_e": 243.6795,
+   "centro_xy_m": [
+    -113402.5,
+    -56097.5
+   ],
+   "caja_xy_m": [
+    -123400.0,
+    -66095.0,
+    -103405.0,
+    -46100.0
+   ],
+   "caja_lado_km": [
+    20.0,
+    20.0
+   ],
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": "A3CLR22_12_deGerlache_Kocher_Massif.zip",
+   "sdem_mascara": "A3CLR22_12_deGerlache_Kocher_Massif/A312_GLDMASK_005.tif",
+   "sdem_px_mascara_m": 5.0,
+   "fuente": "Centro y caja = huella del GLDMASK_005.tif del SDEM (Bertone et al., Zenodo 10.5281/zenodo.17954508, CC-BY-4.0), convertida con stereo_inverse (R = 1737,4 km). NASA no publica coordenadas de las regiones.",
+   "confianza": "derivada de la huella del SDEM; el centro oficial de la región no se publica (±~5 km de incertidumbre respecto al centro nominal de 15 km, a verificar)",
+   "rasgo_cercano": {
+    "nombre": "Mons Kocher",
+    "feature_id": 16394,
+    "tipo": "Mons",
+    "distancia_km": 11.9
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "peak_near_cabeus_b",
+   "nombre": "Peak Near Cabeus B",
+   "listas": [
+    "2024"
+   ],
+   "centro_lat_deg": null,
+   "centro_lon_deg_e": null,
+   "centro_xy_m": null,
+   "caja_xy_m": null,
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": null,
+   "fuente": "Lista de nueve regiones de NASA (27-oct-2024, RELEASE24-136); sin coordenadas ni SDEM.",
+   "confianza": "sin coordenadas verificadas",
+   "pista_gazetteer": {
+    "nombre": "Cabeus B",
+    "feature_id": 8058,
+    "tipo": "Satellite Feature",
+    "lat_deg": -82.2587,
+    "lon_deg_e": 305.41540000000003
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "mons_mouton",
+   "nombre": "Mons Mouton",
+   "listas": [
+    "2024"
+   ],
+   "centro_lat_deg": null,
+   "centro_lon_deg_e": null,
+   "centro_xy_m": null,
+   "caja_xy_m": null,
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": null,
+   "fuente": "Lista de nueve regiones de NASA (27-oct-2024, RELEASE24-136); sin coordenadas ni SDEM.",
+   "confianza": "sin coordenadas verificadas",
+   "pista_gazetteer": {
+    "nombre": "Mons Mouton",
+    "feature_id": 16070,
+    "tipo": "Mons",
+    "lat_deg": -84.60000000000001,
+    "lon_deg_e": 31.0
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "mons_mouton_plateau",
+   "nombre": "Mons Mouton Plateau",
+   "listas": [
+    "2024"
+   ],
+   "centro_lat_deg": null,
+   "centro_lon_deg_e": null,
+   "centro_xy_m": null,
+   "caja_xy_m": null,
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": null,
+   "fuente": "Lista de nueve regiones de NASA (27-oct-2024, RELEASE24-136); sin coordenadas ni SDEM.",
+   "confianza": "sin coordenadas verificadas",
+   "pista_gazetteer": {
+    "nombre": "Mons Mouton",
+    "feature_id": 16070,
+    "tipo": "Mons",
+    "lat_deg": -84.60000000000001,
+    "lon_deg_e": 31.0
+   },
+   "dem_lola_5m_sitio": null
+  },
+  {
+   "id": "slater_plain",
+   "nombre": "Slater Plain",
+   "listas": [
+    "2024"
+   ],
+   "centro_lat_deg": null,
+   "centro_lon_deg_e": null,
+   "centro_xy_m": null,
+   "caja_xy_m": null,
+   "tamano_oficial_nasa_km": 15,
+   "sdem_zip": null,
+   "fuente": "Lista de nueve regiones de NASA (27-oct-2024, RELEASE24-136); sin coordenadas ni SDEM.",
+   "confianza": "sin coordenadas verificadas",
+   "pista_gazetteer": {
+    "nombre": "Slater",
+    "feature_id": 15325,
+    "tipo": "Crater",
+    "lat_deg": -88.0792,
+    "lon_deg_e": 111.2881
+   },
+   "dem_lola_5m_sitio": null
+  }
+ ]
+}
