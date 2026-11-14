@@ -11,7 +11,7 @@ Este es el guion para grabar el vídeo con la rama **`feat/lunaris-ui`** (marca 
 | Cifra | Valor | Dónde se ve |
 |---|---|---|
 | Malapert, inicio 2026-12-16 | APTO, nota 98,4 | «Capacidad del sitio» |
-| Fechas de inicio que sirven en Malapert | 5 de 366 | tarjeta principal («Fechas de inicio que sirven») |
+| Fechas de inicio que sirven en Malapert | 5 de 366 | tarjeta principal («Fechas de inicio que sirven»). **Solo sale con un periodo mayor que la misión**: pon inicio 2026-12-01 y 379 días (con periodo = misión hay una sola fecha y la fila no aparece) |
 | Shackleton TOP-1, inicio 2026-12-12 | enlace 100 %, nota 97,4, APTO | «Capacidad del sitio» |
 | Shackleton TOP-1, inicio 2026-12-06 | enlace 62 %, hueco de 127 h, CONDICIONAL (73,9) | «Capacidad del sitio» |
 

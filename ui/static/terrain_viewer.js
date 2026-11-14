@@ -163,13 +163,13 @@
     '  float dl = uFlags.x > 0.5 ? lam : flt;',
     '  float sh = uFlags.z > 0.5 ? vL : 1.0;',
     '  float L = uAmb + dl * sh;',
-    '  vec3 col = pow(vec3(clamp(0.085 * L * 1.15, 0.0, 1.0)), vec3(1.0 / 2.2));',
+    '  vec3 col = pow(vec3(clamp(0.115 * L * 1.15, 0.0, 1.0)), vec3(1.0 / 2.2));',
     '  float r = max(abs(vXZ.x - uCtr.x), abs(vXZ.y - uCtr.y)) / uHalf;',
     '  col = mix(uFade, col, 1.0 - smoothstep(0.55, 0.98, r));',
     '  gl_FragColor = vec4(col, 1.0);',
     '}'].join('\n');
   var matC = new THREE.ShaderMaterial({ vertexShader: VERT_C, fragmentShader: FRAG_C, polygonOffset: true, polygonOffsetFactor: 3, polygonOffsetUnits: 3,
-    uniforms: { uSun: { value: sunLight.clone().normalize() }, uExpo: { value: Math.min(expo, 1.0) }, uAmb: { value: 0.012 }, uFlags: { value: new THREE.Vector4(1, 0, 1, 0) },
+    uniforms: { uSun: { value: sunLight.clone().normalize() }, uExpo: { value: Math.min(expo, 1.0) }, uAmb: { value: 0.03 }, uFlags: { value: new THREE.Vector4(1, 0, 1, 0) },
                 uCtr: { value: new THREE.Vector2() }, uHalf: { value: 1 }, uFade: { value: new THREE.Vector3(0, 0, 0) } } });
   var FADE_OBS = [0.047, 0.051, 0.067];                              // = color de la silueta del horizonte calculado (0x0c0d11)
   var ctxMesh = null, patchMesh = null, ctxLblP = null;

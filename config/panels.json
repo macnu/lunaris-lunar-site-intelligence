@@ -267,7 +267,7 @@
     },
     {
       "id": "tj-gaas-vertical-mast",
-      "name": "Array vertical en mastil (tipo VSAT / LSITP de NASA)",
+      "name": "Array vertical en mastil (concepto NASA VSAT; celda 3J de referencia, array no publicado)",
       "cell_technology": "celdas de alta eficiencia espacial (tipo GaAs multiunion) sobre manta desplegable; tipo exacto en los prototipos: a verificar",
       "description": "Concepto NASA para sol rasante: manta vertical en mastil telescopico de hasta ~32 ft (~9.8 m) para ganar altura sobre el horizonte topografico y orientacion normal al Sol.",
       "mounting_default": "vertical_az_tracking",

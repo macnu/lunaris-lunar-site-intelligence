@@ -325,6 +325,10 @@ with hero_col:
     facts_hero += C.slope_facts(res)
     if m.link_fraction is not None:
         facts_hero.append(("Hueco máx. sin enlace", C.fmt_duration(m.max_link_gap_s, m.max_link_gap_truncated), ""))
+    _fr = res.network_fraction_by_direction or {}
+    if "receive" in _fr and "transmit" in _fr:
+        facts_hero.append(("La red ve la Luna", f"{C.fmt_num(100 * _fr['receive'], 0)} % al recibir · {C.fmt_num(100 * _fr['transmit'], 0)} % al enviar",
+                           "enviar órdenes exige más elevación de antena (10,1° frente a 6°)"))
     st.markdown(C.hero_html(
         kicker="Lugar y fecha sugeridos" if S.is_suggested() else "Análisis del lugar",
         title=C.place_name(o.label),
