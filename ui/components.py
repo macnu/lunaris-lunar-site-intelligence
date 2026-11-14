@@ -624,19 +624,6 @@ def download_comparison(rows: list[dict], *, key: str, file_name: str = "lsi_com
 
 
 # ------------------------------------------------------------------------------------------------ accesibilidad
-BRAND_SVG = ('<svg class="lsi-moon" viewBox="0 0 48 48" width="40" height="40" role="img" aria-label="Luna creciente">'
-             '<defs><linearGradient id="lsiMoon" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8f4ff"/>'
-             '<stop offset="1" stop-color="#5cc2f5"/></linearGradient></defs>'
-             '<path d="M30 5a19 19 0 1 0 0 38 15 15 0 1 1 0-38z" fill="url(#lsiMoon)"/></svg>')
-
-
-def brand_header() -> None:
-    """Marca LUNARIS con una luna creciente propia en SVG (sin logotipos de terceros) y el crédito de datos en texto."""
-    st.markdown('<header class="lsi-brand">' + BRAND_SVG + '<div><div class="lsi-brand-name">LUNARIS</div>'
-                '<div class="lsi-brand-sub">Lunar Site Intelligence</div></div>'
-                '<div class="lsi-brand-credit">Datos: NASA LOLA / PGDA / USGS / JPL</div></header>', unsafe_allow_html=True)
-
-
 @lru_cache(maxsize=1)
 def _css() -> str:
     return Path(__file__).with_name("styles.css").read_text(encoding="utf-8")

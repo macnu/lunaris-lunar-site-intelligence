@@ -160,12 +160,3 @@ h3 { font-size: 1.05rem !important; font-weight: 650 !important; }
 .st-key-lsi-split [data-testid="stColumn"] { min-width: min(100%, 22rem); }
 
 .lsi-kpi.txt .lsi-kpi-value { font-size: 1.25rem; line-height: 1.25; font-weight: 650; }
-
-/* marca LUNARIS */
-.lsi-brand { display: flex; align-items: center; gap: .8rem; padding: .2rem 0 .6rem; border-bottom: 1px solid var(--line); margin-bottom: .6rem; }
-.lsi-moon { flex: none; filter: drop-shadow(0 0 8px rgba(92, 194, 245, .55)); }
-.lsi-brand-name { font-size: 1.5rem; font-weight: 750; letter-spacing: .28em; line-height: 1; color: var(--text); }
-.lsi-brand-sub { font-size: .8rem; letter-spacing: .16em; color: var(--muted); text-transform: uppercase; }
-.lsi-brand-credit { margin-left: auto; font-size: .74rem; color: var(--faint); text-align: right; }
-@media (max-width: 700px) { .lsi-brand-credit { display: none; } }
-header[data-testid="stHeader"] { background: rgba(8, 12, 28, .85); backdrop-filter: blur(6px); }

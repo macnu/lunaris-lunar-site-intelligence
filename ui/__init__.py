@@ -21,14 +21,6 @@ PAGE_SPECS: tuple[tuple[str, str, str], ...] = (
 )
 
 
-# Agrupación de la navegación superior (4 secciones). Cada página sigue siendo un fichero de ``ui/pages``.
-NAV_SECTIONS: dict[str, str] = {
-    "search": "Explorador", "explorer": "Explorador", "best_spots": "Explorador",
-    "site_capacity": "Análisis", "horizon_visibility": "Análisis", "timeline": "Análisis", "power_panels": "Análisis",
-    "site_score": "Análisis", "comparison": "Comparativa", "about": "Informe",
-}
-
-
 def discover_pages(pages_dir: Path) -> tuple[list[tuple[Path, str, str]], list[str]]:
     """Páginas existentes ``[(ruta, título, icono)]`` en el orden de ``PAGE_SPECS`` y nombres de las que faltan."""
     found, missing = [], []

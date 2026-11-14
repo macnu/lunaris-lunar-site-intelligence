@@ -17,7 +17,7 @@ for p in (str(ROOT), str(ROOT / "src")):     # `ui` y `lsi` importables aunque n
 import streamlit as st  # noqa: E402
 
 from lsi.contracts import LSIError  # noqa: E402
-from ui import NAV_SECTIONS, PAGE_SPECS, discover_pages  # noqa: E402
+from ui import PAGE_SPECS, discover_pages  # noqa: E402
 
 st.set_page_config(page_title="Lunar Site Intelligence", page_icon=":material/dark_mode:", layout="wide",
                    initial_sidebar_state="expanded")
@@ -35,7 +35,6 @@ def _home() -> None:
 
 def main() -> None:
     C.inject_styles()
-    C.brand_header()
     try:
         ctx = cache.get_context()
     except LSIError as e:       # p. ej. KernelsMissingError (arquitectura §9.1): pantalla de configuración
@@ -50,17 +49,12 @@ def main() -> None:
     pages_dir = Path(os.environ.get("LSI_PAGES_DIR", ROOT / "ui" / "pages"))
     found, missing = discover_pages(pages_dir)
     pages = [st.Page(str(path), title=title, icon=icon, url_path=path.stem) for path, title, icon in found]
-    sections: dict = {}
-    for (path, _t, _i), pg in zip(found, pages):
-        sections.setdefault(NAV_SECTIONS.get(path.stem, "Análisis"), []).append(pg)
     if not pages:
         pages = [st.Page(_home, title="Inicio", icon=":material/home:", url_path="inicio", default=True)]
-        sections = {}
     elif missing:
         title = {n: t for n, t, _ in PAGE_SPECS}
         st.sidebar.caption("Páginas pendientes: " + ", ".join(title[n] for n in missing))
-    # navegación superior horizontal con 4 secciones (Explorador · Análisis · Comparativa · Informe)
-    st.navigation(sections if sections else pages, position="top").run()
+    st.navigation(pages).run()
 
 
 main()
