@@ -1,0 +1,51 @@
+/* Visor 3D del terreno lunar: se incrusta en línea en el HTML (sin ficheros ni CDNs externos). */
+:root { --bg:#02040a; --panel:rgba(8,14,26,.82); --line:rgba(120,170,230,.28); --txt:#dce7f5; --dim:#8fa3bd; --acc:#4cc2ff; --warn:#ffcf6b; }
+* { box-sizing:border-box; }
+html, body { margin:0; height:100%; background:var(--bg); color:var(--txt); font:13px/1.35 system-ui,"Segoe UI",Roboto,sans-serif; overflow:hidden; }
+#v { position:relative; width:100%; height:100%; }
+#stage { position:absolute; inset:0; }
+#gl { position:absolute; inset:0; width:100%; height:100%; display:block; outline:none; touch-action:none; cursor:grab; }
+#gl:focus-visible { box-shadow:inset 0 0 0 2px var(--acc); }
+#labels { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.lbl { position:absolute; transform:translate(-50%,-100%); white-space:nowrap; font-size:11px; padding:1px 6px; border-radius:3px;
+  background:rgba(4,10,20,.55); color:#d6e6ff; text-shadow:0 0 3px #000; border:1px solid rgba(120,170,230,.25); }
+.lbl.name { color:#9fe3ff; }
+.lbl.nophoto { transform:translate(-50%,40%); color:#c9c9c9; background:rgba(20,20,20,.5); font-style:italic; }
+.lbl.obs { transform:translate(-50%,-110%); font-size:13px; font-weight:600; padding:5px 10px; color:#fff;
+  background:rgba(10,30,60,.78); border:1px solid #4cc2ff; box-shadow:0 0 12px rgba(76,194,255,.55); }
+.lbl.sky { color:#ffe9a8; transform:translate(-50%,10px); }
+.lbl.earth { color:#9cd0ff; transform:translate(-50%,10px); }
+.panel { position:absolute; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px 10px; backdrop-filter:blur(4px); }
+#p-layers { left:8px; top:8px; width:178px; max-height:calc(100% - 90px); overflow:auto; }
+#p-layers summary { cursor:pointer; font-weight:600; margin-bottom:4px; }
+#p-layers label { display:flex; gap:6px; align-items:center; padding:1px 0; cursor:pointer; }
+#p-layers h4 { margin:8px 0 3px; font-size:11px; font-weight:600; color:var(--dim); text-transform:uppercase; letter-spacing:.04em; }
+.btnrow { display:flex; gap:4px; flex-wrap:wrap; }
+button { font:inherit; color:var(--txt); background:rgba(40,70,110,.55); border:1px solid var(--line); border-radius:5px; padding:3px 8px; cursor:pointer; }
+button:hover { background:rgba(60,100,160,.7); }
+button[aria-pressed="true"] { background:#1d6fb3; border-color:#4cc2ff; }
+button:focus-visible, input:focus-visible { outline:2px solid var(--acc); outline-offset:1px; }
+input[type=range] { width:100%; accent-color:#4cc2ff; }
+.small { font-size:11px; color:var(--dim); }
+#p-info { right:8px; top:8px; width:230px; }
+#p-info b { color:#fff; }
+#p-info h3 { margin:0 0 4px; font-size:14px; }
+#p-info .row { display:flex; justify-content:space-between; gap:8px; }
+#p-info .hid { color:var(--warn); }
+#hud-bl { position:absolute; left:8px; bottom:34px; display:flex; align-items:flex-end; gap:14px; pointer-events:none; }
+#north { width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:var(--panel); position:relative; }
+#north i { position:absolute; left:50%; top:50%; width:0; height:0; margin:-15px 0 0 -5px; border-left:5px solid transparent; border-right:5px solid transparent; border-bottom:15px solid #ff6b6b; transform-origin:50% 15px; }
+#north span { position:absolute; left:50%; top:-1px; transform:translateX(-50%); font-size:10px; font-weight:700; color:#fff; }
+#scale { color:#fff; font-size:11px; text-shadow:0 0 3px #000; }
+#scale div { height:5px; border:2px solid #fff; border-top:none; margin-bottom:2px; }
+#notice { position:absolute; left:8px; right:8px; bottom:6px; font-size:11px; color:var(--warn); background:rgba(0,0,0,.55); border-radius:5px; padding:3px 8px; pointer-events:none; }
+#hud-top { position:absolute; left:50%; top:8px; transform:translateX(-50%); font-size:12px; background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:3px 10px; max-width:42%; text-align:center; pointer-events:none; }
+#desc { position:absolute; left:196px; right:250px; top:46px; max-height:60%; overflow:auto; z-index:5; font-size:12px; }
+#fallback { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; background:#0b1220; color:var(--txt); }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+[hidden] { display:none !important; }
+@media (max-width:720px) {
+  #p-info { top:auto; bottom:58px; width:auto; left:8px; right:8px; font-size:11px; }
+  #p-layers { width:150px; }
+  #hud-top, #desc { display:none; }
+}

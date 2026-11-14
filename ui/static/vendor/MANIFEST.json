@@ -1,0 +1,24 @@
+{
+ "package": "three",
+ "version": "0.147.0",
+ "license": "MIT (Copyright 2010-2022 three.js authors)",
+ "fetched": "2026-11-14",
+ "nota": "Vendorizado: el visor no pide nada a CDNs en tiempo de ejecución. r147 es la última versión con build UMD y examples/js/controls.",
+ "files": {
+  "three.min.js": {
+   "url": "https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js",
+   "bytes": 607784,
+   "sha256": "f34446bf875b5fb0dcd93819ffe1d9e182d46634ee855f5d904c6c4ac7cdbc95"
+  },
+  "OrbitControls.js": {
+   "url": "https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js",
+   "bytes": 26660,
+   "sha256": "b4c6e53f98538535b11fd6655627d47fb5877b3ad972568bff0a7026c4b6d5c4"
+  },
+  "LICENSE": {
+   "url": "https://cdn.jsdelivr.net/npm/three@0.147.0/LICENSE",
+   "bytes": 1081,
+   "sha256": "fbf3943930dacbf56aabb8dc5d816440bd16aa6f4cc78ddbdf12106ee1807832"
+  }
+ }
+}

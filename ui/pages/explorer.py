@@ -5,6 +5,9 @@ curvas de nivel, nombres del gazetteer, escala y norte; selección por clic) y c
 No calcula: pinta ``visualization.relief_map`` y ``visualization.terrain3d`` con recortes ligeros leídos (y cacheados) aquí;
 el punto sale de ``ui.cache``. Los nombres se proyectan aquí (``data.gazetteer`` + ``astronomy.coordinates``).
 Sin DEM en el punto (o «esfera lisa» forzada) NO se dibuja un 3D vacío: mapa global plano y aviso «sin datos de terreno».
+
+Vista 3D principal: ``ui.terrain_viewer`` (three.js autocontenido): terreno SDEM/LOLA, foto LROC, sombras de ``shadows`` en el instante
+del cursor y Sol/Tierra en su acimut/elevación reales. El 3D de Plotly queda como «Vista alternativa» (expander).
 """
 from __future__ import annotations
 
@@ -26,10 +29,10 @@ from lsi.terrain import shadows
 from lsi.contracts import (
     MOON_RADIUS_KM, DemLayer, DemNotFoundError, DemWindow, HorizonMode, Severity, StateKey as K,
 )
-from lsi.data import catalog, gazetteer, loader
+from lsi.data import catalog, gazetteer, imagery, loader, sdem
 from lsi.visualization import terrain3d as T, theme
 from lsi.visualization.relief_map import hillshade, relief_map_figure
-from ui import cache, components as C, state as S
+from ui import cache, components as C, state as S, terrain_viewer as TV
 
 MAX_PX = 400      # ≤ 400×400 puntos en 3D (el recorte de 3 km de radio sale a 15 m/celda); el cálculo científico usa el DEM completo
 ILLUM_PX = 250    # las sombras se calculan en una rejilla ≤ 250² (≈ 30 m, la resolución efectiva del DEM) y se amplían a la malla del 3D
@@ -39,6 +42,7 @@ LAYERS = {"elevacion": "elevation", "pendiente": "slope", "incertidumbre": "unce
 LAYER_LABEL = {"elevacion": "Elevación", "pendiente": "Pendiente", "incertidumbre": "Incertidumbre vertical (TOTERR)",
                "muestreo": "Calidad de muestreo (LDEC)", "iluminacion": "Iluminación (Sol y sombras)"}
 _T = "_x_t"       # slider de fecha y hora de la capa Iluminación
+VIEWER_H = 660    # alto del visor three.js (px)
 CLICK_GRID = 80   # rejilla de puntos invisibles del mapa 2D (ver relief_map; Plotly no deja seleccionar un mapa de calor)
 MAX_LABELS = 12   # nombres de gazetteer rotulados en el mapa 2D (los de mayor diámetro que no se solapen)
 
@@ -76,17 +80,24 @@ def _far_meta():
     return loader.read_metadata(ref) if ref else None
 
 
-def sun_at(res, utc) -> tuple[float, float, bool]:
-    """(azimut N→E, elevación, dentro_del_periodo) del Sol en el punto del análisis en el instante ``utc`` (datetime UTC): interpola
-    linealmente ``res.sky.sun`` (rejilla uniforme desde ``request.start_utc`` cada ``request.step_s``); el azimut se interpola
-    desenrollado. Fuera del periodo devuelve el extremo más cercano y ``False``."""
+def _body_at(res, track, utc) -> tuple[float, float, float, bool]:
+    """(azimut N→E, elevación, radio angular °, dentro_del_periodo) de un cuerpo (``res.sky.sun`` / ``res.sky.earth``) en ``utc``: interpola
+    linealmente la rejilla uniforme desde ``request.start_utc`` cada ``request.step_s``; el azimut se interpola desenrollado.
+    Fuera del periodo devuelve el extremo más cercano y ``False``."""
     n = len(res.sky.et)
     pos = (utc - S.parse_utc(res.request.start_utc)).total_seconds() / float(res.request.step_s)
     inside = 0.0 <= pos <= n - 1
     pos = min(max(pos, 0.0), n - 1.0)
     i = np.arange(n)
-    az = float(np.degrees(np.interp(pos, i, np.unwrap(np.radians(np.asarray(res.sky.sun.az_deg, float))))) % 360.0)
-    return az, float(np.interp(pos, i, np.asarray(res.sky.sun.el_deg, float))), inside
+    az = float(np.degrees(np.interp(pos, i, np.unwrap(np.radians(np.asarray(track.az_deg, float))))) % 360.0)
+    return (az, float(np.interp(pos, i, np.asarray(track.el_deg, float))),
+            float(np.interp(pos, i, np.asarray(getattr(track, "radius_deg", np.zeros(n)), float))), inside)
+
+
+def sun_at(res, utc) -> tuple[float, float, bool]:
+    """(azimut N→E, elevación, dentro_del_periodo) del Sol en el punto del análisis en el instante ``utc`` (datetime UTC)."""
+    az, el, _, inside = _body_at(res, res.sky.sun, utc)
+    return az, el, inside
 
 
 def _illum_grid(win: DemWindow, lat: float, lon: float, az: float, el: float):
@@ -112,6 +123,60 @@ def _illumination(dem_key: str, cx: float, cy: float, radius_m: Optional[float],
     """Iluminación del recorte cacheada por (recorte, punto, az, el) con az/el ya redondeados a 0,05°: (fracción, az de rejilla, el)."""
     win, _ = _terrain(dem_key, cx, cy, radius_m, max_px)
     return _illum_grid(win, lat, lon, az, el)
+
+
+@st.cache_data(max_entries=4, ttl=1800, show_spinner="Preparando el terreno del visor 3D…")
+def _viewer_grid(dem_key: str, cx: float, cy: float, radius_m: Optional[float]) -> dict:
+    """Malla del visor (≤ ``TV.MAX_SIDE`` por lado) con la foto alineada: SDEM de 5 m + ortomosaico (Site23, Site11; el hueco del
+    ortomosaico se rellena con el mosaico NAC si lo hay) o, si no hay SDEM, relieve LOLA + mosaico NAC de 1 m (Site04).
+    Misma extensión que el recorte del resto de la página. Claves: win (DemWindow), photo/valid (uint8/bool o None), source, native_px_m."""
+    lo, _ = _terrain(dem_key, cx, cy, radius_m, MAX_PX)
+    ny0, nx0 = lo.data.shape
+    half = max(nx0, ny0) * lo.pixel_size_m / 2.0
+    cxw, cyw = lo.x0_m + (nx0 - 1) / 2.0 * lo.pixel_size_m, lo.y0_m - (ny0 - 1) / 2.0 * lo.pixel_size_m
+    pack = sdem.terrain_texture_pack(dem_key, cxw, cyw, half, TV.MAX_SIDE)
+    if pack is not None:
+        win = DemWindow(pack["heights"].astype(float), pack["x0_m"], pack["y0_m"], pack["px_m"], DemLayer.SURF, lo.meta)
+        comb = imagery.combine_with_sdem(dem_key, pack)
+        if comb is not None:
+            src = comb["texture_source"]
+            kind = "mixed" if ((src == 1).any() and (src == 2).any()) else ("nac" if (src == 2).any() else "sdem")
+            return dict(win=win, photo=comb["texture"], valid=comb["texture_valid"], source=kind,
+                        native_px_m=1.0 if kind == "nac" else sdem.NATIVE_PX_M)
+        return dict(win=win, photo=pack["ortho"], valid=pack["texture_valid"], source="sdem", native_px_m=sdem.NATIVE_PX_M)
+    win, _ = _terrain(dem_key, cx, cy, radius_m, TV.MAX_SIDE)
+    ny, nx = win.data.shape
+    im = imagery.imagery_on_grid(dem_key, win.x0_m, win.y0_m, win.pixel_size_m, ny, nx)
+    if im is None:
+        return dict(win=win, photo=None, valid=None, source="none", native_px_m=imagery.NATIVE_PX_M)
+    return dict(win=win, photo=im["image"], valid=im["coverage"], source="nac", native_px_m=imagery.NATIVE_PX_M)
+
+
+@st.cache_data(max_entries=12, ttl=1800, show_spinner="Calculando las sombras del visor 3D…")
+def _viewer_illum(dem_key: str, cx: float, cy: float, radius_m: Optional[float], lat: float, lon: float, az: float, el: float):
+    """Iluminación sobre la malla del visor (las sombras salen de ``shadows.illumination`` con el MISMO relieve que se dibuja)."""
+    return _illum_grid(_viewer_grid(dem_key, cx, cy, radius_m)["win"], lat, lon, az, el)
+
+
+def viewer_scene(obs, res, cur, dem_key: str, cx: float, cy: float, radius_m: Optional[float], labels, exag0: float = 1.5) -> dict:
+    """Escena del visor three.js para el instante ``cur`` (UTC): terreno + foto + sombras + Sol y Tierra reales (ver ``ui.terrain_viewer``)."""
+    g = _viewer_grid(dem_key, cx, cy, radius_m)
+    win = g["win"]
+    az, el, rs, _ = _body_at(res, res.sky.sun, cur)
+    az_e, el_e, re_, _ = _body_at(res, res.sky.earth, cur)
+    frac, g_az, el_c = _viewer_illum(dem_key, cx, cy, radius_m, round(obs.lat_deg, 4), round(obs.lon_deg_e, 4),
+                                     round(az / 0.05) * 0.05, round(el / 0.05) * 0.05)
+    fin = np.isfinite(frac)
+    hz = res.horizon
+    h_el = np.where(np.isfinite(hz.h_lb_deg), hz.h_lb_deg, -5.0)
+    return TV.build_scene(
+        heights=win.data, x0_m=win.x0_m, y0_m=win.y0_m, px_m=win.pixel_size_m, illum=frac, photo=g["photo"], photo_valid=g["valid"],
+        photo_source=g["source"], photo_native_px_m=g["native_px_m"],
+        obs=dict(x=obs.x_m, y=obs.y_m, lat=obs.lat_deg, lon=obs.lon_deg_e, h=obs.height_m, z=obs.ground_z_m,
+                 label=obs.label.split(" [")[0], north_deg=_north_deg(obs)),
+        sun=dict(az_deg=az, el_deg=el, grid_az_deg=g_az, el_c_deg=el_c, radius_deg=rs),
+        earth=dict(az_deg=az_e, el_deg=el_e, radius_deg=re_), horizon_az=np.asarray(hz.az_deg, float), horizon_el=h_el,
+        names=labels, when_utc=f"{cur:%Y-%m-%d %H:%M}", lit_pct=100.0 * float(np.mean(frac[fin])) if fin.any() else 0.0, exag0=exag0)
 
 
 def lighting_payload(win: DemWindow, lat: float, lon: float, sun_az_deg: float, sun_el_deg: float) -> dict:
@@ -374,8 +439,9 @@ def main() -> None:
     radius_lbl = c2.selectbox("Alcance del recorte", list(RADII), index=0, key="_x_radius",
                               help="Zona alrededor del punto que se dibuja. Más pequeña = celdas más finas (máx. 400 × 400 puntos; "
                                    "con 3 km de radio, celdas de 15 m).")
-    exag = c3.slider("Exageración vertical", 1.0, 8.0, 3.0, 0.5, key="_x_exag",
-                     help="1 = escala real (x, y y altura en la misma proporción). Valores mayores acentúan el relieve.")
+    exag = c3.slider("Exageración (vista alternativa)", 1.0, 8.0, 3.0, 0.5, key="_x_exag",
+                     help="Solo para el 3D de Plotly (vista alternativa). El visor 3D tiene su propio control dentro del visor. "
+                          "1 = escala real (x, y y altura en la misma proporción).")
     c4.number_input("Altura observador (m)", float(o["height_min_m"]), float(o["height_max_m"]), key="_x_height", step=0.5,
                     on_change=_set_height)
 
@@ -389,9 +455,10 @@ def main() -> None:
     if layer not in ("elevacion", "pendiente", "iluminacion") and LAYERS[layer] not in extra:
         st.warning(f"La capa «{LAYER_LABEL[layer]}» no está disponible para este DEM; se muestra la elevación.")
         layer = "elevacion"
+    res, cur = _time_controls(req)                                  # el instante (UTC) manda en el visor 3D y en la capa Iluminación
     sun, sun_line = None, ""
     if layer == "iluminacion":
-        sun, sun_line = _sun_controls(req, obs, radius, cx, cy)
+        sun, sun_line = _sun_light(res, cur, obs, radius, cx, cy) if res is not None else (None, "")
         if sun is None:
             layer = "elevacion"
     markers = _site_markers(ctx, win)
@@ -406,6 +473,18 @@ def main() -> None:
     cands = [m for m in markers if np.hypot(m[1] - obs.x_m, m[2] - obs.y_m) > 150.0]
     if sun is not None:
         st.markdown(f"**{sun_line}**")
+    st.markdown("#### Visor 3D")
+    if res is None:
+        st.warning("El visor 3D necesita la posición del Sol y de la Tierra (análisis del punto) y no está disponible; "
+                   "usa la «Vista alternativa» (Plotly) de más abajo.", icon=":material/view_in_ar:")
+    else:
+        scene = viewer_scene(obs, res, cur, obs.dem_key, cx, cy, radius, labels)
+        TV.render_terrain_viewer(scene, height=VIEWER_H)
+        st.caption(f"Visor three.js: terreno real {scene['nx']} × {scene['ny']} vértices ({C.fmt_num(scene['px_m'], 0)} m/celda), "
+                   f"sombras calculadas para {scene['when_utc']} UTC y el Sol y la Tierra donde dicen los números. "
+                   f"{scene['photo']['notice']} Datos enviados al navegador: {C.fmt_num(scene['_bytes'] / 1e6, 2)} MB.")
+        with st.expander("Descripción de la escena (modo lectura)"):
+            st.write(scene["description"])
     st.markdown("#### Mapa topográfico")
     st.plotly_chart(_fig_relief(win, extra, obs, layer, cands, labels, sun), key="_x_map", on_select=_on_map_select,
                     selection_mode="points", width="stretch", theme=None)
@@ -420,22 +499,22 @@ def main() -> None:
              f"capa «{LAYER_LABEL[layer]}», vista oblicua desde el norte. Un rombo marca el punto de observación, a {obs.height_m:g} m "
              f"sobre el suelo. Se puede rotar arrastrando.")
     details = [f"Punto de observación: {C.fmt_num(obs.lat_deg, 4)}°, {C.fmt_num(obs.lon_deg_e, 4)}°E, suelo a {C.fmt_num(obs.ground_z_m, 1, 'm')}"] +               [f"{lbl}: x={C.fmt_num(x, 0)} m, y={C.fmt_num(y, 0)} m, z={C.fmt_num(z, 0, 'm')}" for lbl, x, y, z in markers] +               [f"{n} ({t}{', ' + C.fmt_num(dk, 1) + ' km' if dk else ''}): x={C.fmt_num(x, 0)} m, y={C.fmt_num(y, 0)} m" for n, x, y, t, dk in labels]
-    st.markdown("#### Relieve en 3D")
-    C.accessible_chart(_fig_3d(win, extra, obs, layer, exag, markers, labels, sun), alt3d, key="_x_3d", details=details)
+    with st.expander("Vista alternativa: relieve 3D con Plotly (sin foto ni sombras del visor)"):
+        C.accessible_chart(_fig_3d(win, extra, obs, layer, exag, markers, labels, sun), alt3d, key="_x_3d", details=details)
 
     _point_panel(obs)
     _sites_buttons(ctx)
     _metadata_section(obs.dem_key, ctx, win.meta)
 
 
-def _sun_controls(req, obs, radius, cx, cy):
-    """Selector de fecha y hora (cursor compartido ``CURSOR_UTC``) + iluminación del recorte. Devuelve ((fracción, az rejilla, el),
-    línea de texto) o (None, "") si no se puede (sin análisis)."""
-    st.markdown("**Iluminación**")
+def _time_controls(req):
+    """Selector de fecha y hora (cursor compartido ``CURSOR_UTC``). Devuelve (análisis, instante UTC) o (None, None) si no hay análisis
+    (entonces el visor 3D no se ofrece: sin Sol ni Tierra no hay iluminación que dibujar)."""
+    st.markdown("**Instante (iluminación y visor 3D)**")
     res, err = cache.try_analysis(req)
     if err or res is None:
-        st.warning(f"No se pudo obtener la posición del Sol para esta capa: {err or 'sin análisis'}. Se muestra la elevación.")
-        return None, ""
+        st.warning(f"No se pudo obtener la posición del Sol y la Tierra: {err or 'sin análisis'}.")
+        return None, None
     t0, t1 = S.parse_utc(res.request.start_utc), S.parse_utc(res.request.end_utc)
     try:
         cur = S.parse_utc(S.get_str(K.CURSOR_UTC))
@@ -450,7 +529,11 @@ def _sun_controls(req, obs, radius, cx, cy):
     ss[_T] = cur
     st.slider("Fecha y hora (UTC)", min_value=t0, max_value=t1, step=timedelta(hours=1), format="YYYY-MM-DD HH:mm", key=_T,
               on_change=_set_cursor, help="Es el mismo instante que en Horizonte y visibilidad. Mover el cursor no repite el análisis.")
-    cur = ss[_T]
+    return res, ss[_T]
+
+
+def _sun_light(res, cur, obs, radius, cx, cy):
+    """Iluminación del recorte LOLA para la capa «Iluminación» del mapa 2D y el 3D de Plotly: ((fracción, az rejilla, el), línea de texto)."""
     az, el, _ = sun_at(res, cur)
     az_r, el_r = round(az / 0.05) * 0.05, round(el / 0.05) * 0.05
     frac, g_az, el_c = _illumination(obs.dem_key, cx, cy, radius, MAX_PX, round(obs.lat_deg, 4), round(obs.lon_deg_e, 4), az_r, el_r)
