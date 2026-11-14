@@ -226,6 +226,8 @@ def _body(req, res, g: _Grid) -> None:
     if lim > 0:
         st.warning(f"{HP.LIMITED_LABEL}: {C.fmt_pct(lim, 0)} de los azimutes (tramos rayados). Ahí el horizonte real puede ser "
                    "más alto y el Sol o la Tierra, más difíciles de ver.", icon=":material/warning:")
+    if res.observer.mode is HorizonMode.FAR_FIELD:
+        st.warning(f"**{C.FAR_LABEL}:** la línea gris es el horizonte del DEM polar de 80 m. " + C.far_field_note(), icon=":material/terrain:")
     if res.observer.mode is HorizonMode.SMOOTH_SPHERE:
         st.info("Modo esfera lisa: la línea gris es solo la curvatura lunar, sin relieve. Es un caso optimista.", icon=":material/public:")
     sun, ea = tracks[Body.SUN], tracks[Body.EARTH]

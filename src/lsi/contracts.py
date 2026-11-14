@@ -117,6 +117,7 @@ class HorizonMode(str, enum.Enum):
     """Origen del horizonte: DEM real o esfera lisa (sitio sin DEM, sin relieve)."""
     DEM = "dem"
     SMOOTH_SPHERE = "smooth_sphere"
+    FAR_FIELD = "far_field"    # solo el DEM polar de 80 m (fuera de los recortes de 5 m): horizonte aproximado, sin terreno fino
 
 
 class VisibilityState(enum.IntEnum):
@@ -171,6 +172,7 @@ class WarningCode(str, enum.Enum):
     POWER_IS_ESTIMATE = "power_is_estimate"
     ECLIPSES_NOT_MODELED = "eclipses_not_modeled"
     NO_DEM_SMOOTH_SPHERE = "no_dem_smooth_sphere"
+    FAR_FIELD_80M = "far_field_80m"
     DEM_EFFECTIVE_RESOLUTION = "dem_effective_resolution"
     HORIZON_TRUNCATED = "horizon_truncated"
     HORIZON_LOWER_BOUND = "horizon_lower_bound"
@@ -1100,6 +1102,7 @@ STANDARD_WARNINGS_ES: Mapping[WarningCode, str] = {
     WarningCode.POWER_IS_ESTIMATE: "Potencia relativa estimada con supuestos declarados (ley del coseno, IAM, temperatura simple). No son vatios de misión; sin polvo, sombra propia ni albedo.",
     WarningCode.ECLIPSES_NOT_MODELED: "No se modelan eclipses lunares (la Tierra tapando al Sol, ~2 al año, hasta ~3,5 h): «oscuridad» solo incluye relieve.",
     WarningCode.NO_DEM_SMOOTH_SPHERE: "Sin DEM en este punto: se usa esfera lisa sin relieve. Solo el horizonte esférico; la iluminación real puede ser muy distinta.",
+    WarningCode.FAR_FIELD_80M: "Resolución 80 m: horizonte aproximado; no sirve para decidir un aterrizaje fino.",
     WarningCode.DEM_EFFECTIVE_RESOLUTION: "El DEM LOLA tiene 5 m/píxel pero ~90 % de píxeles sin retorno propio: resolución efectiva ≈ 30 m. Rocas y cráteres menores de ~150 m no están evaluados.",
     WarningCode.HORIZON_TRUNCATED: "Horizonte limitado por cobertura: el DEM no llega más lejos en algunos azimutes; el horizonte real es ≥ al dibujado y la iluminación es una cota superior.",
     WarningCode.HORIZON_LOWER_BOUND: "El horizonte mostrado es una cota inferior en los azimutes marcados; el resultado es optimista en iluminación.",
@@ -1169,6 +1172,7 @@ class AnalysisRequest:
     link_custom: Optional[Tuple[Tuple[float, ...], ...]] = None   # red 'custom': ((lat, lon_E, min_el[, ...]), ...)
     link_station_min_elevation_deg: Optional[float] = None   # fuerza la elevación mínima de TODAS las estaciones (sensibilidad)
     link_direction: str = "receive"          # sentido del enlace: 'receive' (elev. mínima de recepción, 6° DSN) | 'transmit' (de transmisión, 10,1°) | 'both' (intersección)
+    force_far_field: bool = False            # fuerza el horizonte con SOLO el DEM polar de 80 m aunque haya recorte de 5 m (validación del modo FAR_FIELD)
 
 
 @dataclass(eq=False)

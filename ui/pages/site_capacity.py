@@ -175,7 +175,8 @@ def _mini_map(res) -> None:
             C.accessible_chart(fig, "Mapa de pendiente sobre relieve sombreado alrededor del punto elegido (rombo ámbar); "
                                "más claro es más inclinado.", key="_sc_minimap")
             return
-        why = "Sin mapa de terreno en este punto (esfera lisa): no hay relieve que dibujar."
+        why = ("Aquí solo hay el DEM polar de 80 m (relieve aproximado): no hay mapa de pendiente de aterrizaje ni relieve fino que dibujar."
+               if o.mode is HorizonMode.FAR_FIELD else "Sin mapa de terreno en este punto (esfera lisa): no hay relieve que dibujar.")
     except Exception as e:      # noqa: BLE001 - un mapa roto no debe tirar la página
         why = f"No se pudo dibujar el mini-mapa topográfico ({type(e).__name__})."
     st.markdown(f'<div class="lsi-card-empty"><b>Mapa del entorno</b><span>{C.esc(why)}</span></div>', unsafe_allow_html=True)
@@ -306,7 +307,8 @@ with hero_col:
         if sc.confidence is not None:
             lv = sc.confidence.level.value
             verdict_chips.append(C.chip(f"Confianza {lv}", {"alta": "ok", "media": "cond"}.get(lv, "bad"), "◈"))
-    verdict_chips.append(C.chip("Relieve real (DEM)", "info", "⛰") if o.mode is HorizonMode.DEM else C.chip("Esfera lisa: sin terreno", "warn", "◯"))
+    verdict_chips.append({"dem": C.chip("Relieve real (DEM)", "info", "⛰"), "far": C.chip(C.FAR_LABEL, "warn", "⛰"),
+                          "sphere": C.chip("Esfera lisa: sin terreno", "warn", "◯")}[C.terrain_kind(o.mode)])
     if has_window:
         win_line = (f"{C.fmt_utc_short(sc.window_start_utc)} → {C.fmt_utc_short(sc.window_end_utc)} ({C.fmt_num(sc.mission_days, 1)} d)")
     else:
@@ -340,6 +342,9 @@ C.credit_strip()
 
 # --- (B) cabecera técnica + avisos (UN bloque plegable) + incertidumbre
 C.result_header(res)
+if o.mode is HorizonMode.FAR_FIELD:
+    st.warning(f"**{C.FAR_LABEL}:** fuera de los recortes de 5 m el horizonte sale del DEM polar de 80 m. " + C.far_field_note(),
+               icon=":material/terrain:")
 if o.mode is HorizonMode.SMOOTH_SPHERE:
     st.warning("**Esfera lisa:** aquí no hay mapa de terreno, así que se calcula con el **horizonte plano** de una Luna sin relieve. "
                "Es optimista para la luz del Sol (una montaña cercana podría taparlo) y no afecta a dónde está la Tierra en el cielo.",
@@ -351,6 +356,10 @@ elif o.mode is HorizonMode.SMOOTH_SPHERE:
     rngs = {}      # sin terreno los escenarios no varían nada: lo = hi degenerado no es un rango
     st.caption(":material/straighten: **Rango de incertidumbre: no calculado.** Causa: esfera lisa, sin mapa de terreno; no hay "
                "escenarios de terreno que variar, así que las cifras no llevan rango (no significa que sean exactas).")
+elif o.mode is HorizonMode.FAR_FIELD:
+    rngs = {}
+    st.caption(":material/straighten: **Rango de incertidumbre: no calculado.** Causa: relieve aproximado de 80 m; no hay σ del terreno "
+               "ni escenarios de DEM que variar. El error medido del horizonte (aviso de arriba) es la referencia, no un rango.")
 elif not rngs:
     st.caption(":material/straighten: **Rango de incertidumbre: no calculado.** "
                + (sc.range_note if sc is not None and sc.range_note else "no hay escenarios para este ámbito."))
@@ -358,7 +367,7 @@ elif not rngs:
 facts: dict = {
     "lectura_rapida": quick,
     "lugar": o.label, "lat_deg": o.lat_deg, "lon_deg_e": o.lon_deg_e, "altura_observador_m": o.height_m,
-    "modo_horizonte": "DEM (relieve real)" if o.mode is HorizonMode.DEM else "esfera lisa (horizonte plano)",
+    "modo_horizonte": {"dem": "DEM (relieve real)", "far": "relieve aproximado (80 m)", "sphere": "esfera lisa (horizonte plano)"}[C.terrain_kind(o.mode)],
     "periodo": {"inicio_utc": req.start_utc, "fin_utc": req.end_utc},
     "ventana_mision": {"inicio_utc": sc.window_start_utc, "fin_utc": sc.window_end_utc, "dias": sc.mission_days,
                        "perfil": prof_label} if has_window else None,

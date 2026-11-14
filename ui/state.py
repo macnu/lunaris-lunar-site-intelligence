@@ -175,6 +175,26 @@ def suggested_start(ctx: AppContext, site=None, profile_id: str = "lander_solar_
         return None
 
 
+def best_candidate(ctx: AppContext, dem_prefix: Optional[str], profile_id: str, mission_days: Optional[float]) -> Optional[dict[str, Any]]:
+    """TOP-1 PRECALCULADO del recorte ``dem_prefix`` para el perfil y la duración (``suitability_map.best_points``) con su mejor fecha
+    de inicio: ``{lat, lon, start_utc, days, score, rank}``. None si no hay mapa precalculado (el llamador cae al punto por defecto)."""
+    if not dem_prefix:
+        return None
+    try:
+        from lsi.analysis import suitability_map as sm
+        env = os.environ.get("LSI_SUITABILITY_DIR")
+        cache_dir = Path(env).parent if env else Path(ctx.root) / ctx.cfg["cache"]["dir"]
+        doc = sm.best_points(cache_dir, dem_prefix, profile_id, mission_days or profile_mission_days(ctx, profile_id) or 14.0)
+        top = (doc or {}).get("top") or []
+        if not top or not top[0].get("best_start_utc"):
+            return None
+        t = top[0]
+        return {"lat": float(t["lat_deg"]), "lon": float(t["lon_deg_e"]) % 360.0, "start_utc": str(t["best_start_utc"])[:19],
+                "days": float(doc["duration_days"]), "score": float(t["score"]), "rank": int(t.get("rank", 1))}
+    except Exception:       # noqa: BLE001 - opcional: sin mapa, la comparación usa los puntos por defecto
+        return None
+
+
 def is_suggested() -> bool:
     """True si el punto y la fecha de inicio actuales siguen siendo los sugeridos al abrir (no los ha cambiado el usuario)."""
     ss, sug = st.session_state, st.session_state.get(SUGGESTED)

@@ -52,6 +52,9 @@ def run(res, c):
                          feasible_fraction=sc.feasible_start_fraction)
     for f in _WINDOW_FIELDS:
         setattr(r, f, getattr(sc, f))
+    if res.observer.mode is HorizonMode.FAR_FIELD:      # el re-puntuado vuelve a decir «esfera lisa»: mismos textos que el pipeline
+        from lsi import pipeline
+        pipeline._far_field_score_texts(r)              # ponytail: helper privado del pipeline, igual que ui.cache._countdowns
     return r
 
 
@@ -312,7 +315,7 @@ def main() -> None:
             C.verdict_badge(r)
             if r.partial:
                 st.badge("Sin datos de terreno", icon=":material/terrain:", color="orange",
-                         help=STANDARD_WARNINGS_ES[WarningCode.NO_TERRAIN_DATA_SCORE])
+                         help=C.partial_score_help(res.observer.mode))
             if public:
                 st.markdown(f"**Semáforo: {tl}**" + (f" · {stars(r.score)}" if v in ("APTO", "CONDICIONAL")
                                                       else " · sin estrellas (nota no concluyente)"))
@@ -346,9 +349,13 @@ def main() -> None:
     if r.partial:
         with st.container(border=True):
             st.markdown("**:material/terrain: Modo parcial: sin datos de terreno**")
-            st.markdown("Aquí no hay mapa de alturas (DEM), así que el lugar se trata como una esfera lisa. **Falta:** el relieve que tapa el Sol "
-                        "y la Tierra, y la **pendiente** del suelo (la nota de terreno no se evalúa). La luz y la noche están calculadas sin montañas, "
-                        f"por eso la nota es optimista: el rango {C.fmt_num(r.score_min, 0)}–{C.fmt_num(r.score_max, 0)} va de «terreno pésimo» a «terreno perfecto». "
+            far = res.observer.mode is HorizonMode.FAR_FIELD
+            st.markdown(("Aquí solo hay el DEM polar de 80 m (relieve aproximado), no el de 5 m. **Falta:** la **pendiente** de aterrizaje y el relieve fino "
+                         "(la nota de terreno no se evalúa); el Sol y la Tierra sí usan el horizonte de 80 m, optimista cerca de crestas. "
+                         "La nota es optimista: el rango" if far else
+                         "Aquí no hay mapa de alturas (DEM), así que el lugar se trata como una esfera lisa. **Falta:** el relieve que tapa el Sol "
+                         "y la Tierra, y la **pendiente** del suelo (la nota de terreno no se evalúa). La luz y la noche están calculadas sin montañas, "
+                         "por eso la nota es optimista: el rango") + f" {C.fmt_num(r.score_min, 0)}–{C.fmt_num(r.score_max, 0)} va de «terreno pésimo» a «terreno perfecto». "
                         "No es comparable con sitios que sí tienen DEM.")
 
     # --- desglose
@@ -375,7 +382,7 @@ def main() -> None:
         st.info(f"**La nota de «Tierra / enlace» usa el ENLACE posible, no la Tierra visible.** s_Tierra = mín(1, f_enlace / f_ref) × continuidad (el factor de continuidad baja la nota cuando hay huecos largos sin enlace): "
                 f"f_enlace = {C.fmt_pct(nominal.f_earth, 1)} del tiempo de la ventana, con Tierra a más de "
                 f"{C.fmt_num(lw.min_earth_elevation_deg, 0, '°') if lw else 'el margen del perfil'} sobre el horizonte del lander Y alguna estación "
-                f"de la red {lw.network_label if lw else ''} viendo la Luna; f_ref = {C.fmt_pct(nominal.f_earth_ref, 1)} (Tierra sobre esfera lisa con el "
+                f"de la red {lw.network_label if lw else ''} viendo la Luna; f_ref = {C.fmt_pct(nominal.f_earth_ref, 1)} (Tierra sobre un horizonte sin relieve, solo curvatura, con el "
                 "mismo margen y SIN red). La red es un factor externo que penaliza igual a todos los sitios: una sola estación baja la nota, el DSN casi no.",
                 icon=":material/satellite_alt:")
     else:
@@ -440,6 +447,8 @@ def main() -> None:
                         "Eso no invalida la nota, pero los detalles finos (rocas, cráteres pequeños, pendiente local) no están medidos y la nota puede "
                         "tener errores que el rango no recoge. La etiqueta usa la escala calibrada (soporte = el peor entre huecos sin medida, error "
                         "vertical y estabilidad del horizonte): ya distingue unos puntos de otros, no sale «baja» por sistema.")
+        elif res.observer.mode is HorizonMode.FAR_FIELD:
+            st.markdown("Con el relieve aproximado de 80 m no hay datos de terreno fino (ni pendiente de aterrizaje): la confianza es baja por construcción.")
         else:
             st.markdown("Sin DEM no hay datos de terreno: la confianza es baja por construcción.")
         if not public and res.dem_confidence:

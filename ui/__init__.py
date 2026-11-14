@@ -11,6 +11,7 @@ PAGE_SPECS: tuple[tuple[str, str, str], ...] = (
     ("search", "Buscador", ":material/search:"),
     ("site_capacity", "Capacidad del sitio", ":material/satellite_alt:"),
     ("explorer", "Explorador 3D", ":material/terrain:"),
+    ("polar_map", "Mapa del polo sur", ":material/public:"),
     ("best_spots", "Mejores puntos y fechas", ":material/event_available:"),
     ("horizon_visibility", "Horizonte y visibilidad", ":material/wb_twilight:"),
     ("timeline", "Línea temporal", ":material/timeline:"),
@@ -23,7 +24,7 @@ PAGE_SPECS: tuple[tuple[str, str, str], ...] = (
 
 # Agrupación de la navegación superior (4 secciones). Cada página sigue siendo un fichero de ``ui/pages``.
 NAV_SECTIONS: dict[str, str] = {
-    "search": "Explorador", "explorer": "Explorador", "best_spots": "Explorador",
+    "search": "Explorador", "explorer": "Explorador", "polar_map": "Explorador", "best_spots": "Explorador",
     "site_capacity": "Análisis", "horizon_visibility": "Análisis", "timeline": "Análisis", "power_panels": "Análisis",
     "site_score": "Análisis", "comparison": "Comparativa", "about": "Informe",
 }

@@ -183,17 +183,58 @@ def test_gazetteer_feature_outside_dem_snaps_to_nearest_dem_point(ctx, fid, lat,
     x0, y0, x1, y1 = ctx.dem_refs[key].bounds_xy_m   # el punto ajustado queda dentro del recorte con margen
     assert x0 + 100 <= o.x_m <= x1 - 100 and y0 + 100 <= o.y_m <= y1 - 100
     r2 = P.run_analysis(ctx, AnalysisRequest(lat, lon, START, END30, gazetteer_id=fid, snap_to_dem=False))
-    assert r2.observer.mode is HorizonMode.SMOOTH_SPHERE and r2.observer.snap_distance_km is None   # desactivable
+    assert r2.observer.mode is HorizonMode.FAR_FIELD and r2.observer.snap_distance_km is None   # desactivable: sin snap, el 80 m
 
 
 @pytest.mark.needs_dem
-def test_feature_far_from_any_dem_falls_back_to_sphere_and_custom_point_is_not_snapped(ctx):
-    far = P.resolve_observer(ctx, -84.9998, 11.4031, 2.0, gazetteer_id=3603)   # cráter Malapert, ~26 km del recorte
-    assert far[0].mode is HorizonMode.SMOOTH_SPHERE and far[1][0].code is WarningCode.NO_DEM_SMOOTH_SPHERE
+def test_feature_far_from_recortes_uses_far_field_and_custom_point_is_not_snapped(ctx):
+    far = P.resolve_observer(ctx, -84.9998, 11.4031, 2.0, gazetteer_id=3603)   # cráter Malapert, ~26 km del recorte, dentro del DEM de 80 m
+    assert far[0].mode is HorizonMode.FAR_FIELD and far[1][0].code is WarningCode.FAR_FIELD_80M and far[0].ground_z_m is not None
     free = P.resolve_observer(ctx, -89.67, 129.78, 2.0)   # sin gazetteer/sitio: el usuario eligió ese punto
-    assert free[0].mode is HorizonMode.SMOOTH_SPHERE and free[0].snap_distance_km is None
+    assert free[0].mode is HorizonMode.FAR_FIELD and free[0].snap_distance_km is None
     assert P.snap_candidate(ctx, 0.6741, 23.473) is None   # Apolo 11: ningún DEM razonable
     assert P.snap_candidate(ctx, 0.6741, 23.473, prefer="best") is None
+
+
+@pytest.mark.needs_dem
+def test_far_field_mode_only_inside_polar_domain(ctx):
+    inside = P.resolve_observer(ctx, -84.0, 30.0, 2.0)[0]
+    assert inside.mode is HorizonMode.FAR_FIELD
+    for lat in (-79.5, -60.0, 0.6741):   # fuera del DEM polar (> 80°S): esfera lisa
+        o, w = P.resolve_observer(ctx, lat, 30.0, 2.0)
+        assert o.mode is HorizonMode.SMOOTH_SPHERE and w[0].code is WarningCode.NO_DEM_SMOOTH_SPHERE
+    assert P.resolve_observer(ctx, -84.0, 30.0, 2.0, force_smooth_sphere=True)[0].mode is HorizonMode.SMOOTH_SPHERE
+    assert P.resolve_observer(ctx, *SITES["Site23"], 2.0)[0].mode is HorizonMode.DEM          # dentro del recorte manda el 5 m
+    assert P.resolve_observer(ctx, *SITES["Site23"], 2.0, force_far_field=True)[0].mode is HorizonMode.FAR_FIELD
+
+
+@pytest.mark.needs_dem
+def test_far_field_analysis_partial_score_low_confidence_and_measured_warning(ctx):
+    req = AnalysisRequest(-84.0, 30.0, START, END30)
+    r = P.run_analysis(ctx, req)
+    assert r.observer.mode is HorizonMode.FAR_FIELD and r.horizon.mode is HorizonMode.FAR_FIELD and r.horizon.far_sha256
+    assert r.horizon.h_lb_deg.max() > 5.0 and r.slope is None and r.dem_meta is None      # hay relieve, pero no pendiente de aterrizaje
+    s = r.score
+    assert s.partial and not s.terrain_data and s.confidence.level.value == "baja"
+    txt = " ".join(w.text_es for w in r.warnings) + " ".join(s.assumptions) + s.verdict_reason + " ".join(g.reason for g in s.gates)
+    assert "Resolución 80 m: horizonte aproximado; no sirve para decidir un aterrizaje fino" in txt
+    assert "RMS" in txt and f"{P.FAR_FIELD_VALIDATION['horizon_rms_deg']:.2f}°" in txt         # el error MEDIDO, no uno genérico
+    assert "esfera lisa)" not in " ".join(g.reason for g in s.gates) and "cota optimista sobre esfera lisa" not in s.verdict_reason
+    assert {WarningCode.FAR_FIELD_80M, WarningCode.NO_TERRAIN_DATA_SCORE} <= codes(r) and WarningCode.NO_DEM_SMOOTH_SPHERE not in codes(r)
+    r2 = P.run_analysis(ctx, req)   # determinismo
+    assert np.array_equal(r.horizon.h_lb_deg, r2.horizon.h_lb_deg) and r.metrics.solar_fraction == r2.metrics.solar_fraction
+
+
+@pytest.mark.needs_dem
+@pytest.mark.parametrize("key", list(SITES))
+def test_far_field_horizon_matches_5m_within_measured_tolerance(ctx, key):
+    lat, lon = SITES[key]
+    d = P.run_analysis(ctx, AnalysisRequest(lat, lon, START, END30))
+    f = P.run_analysis(ctx, AnalysisRequest(lat, lon, START, END30, force_far_field=True))
+    assert d.horizon.mode is HorizonMode.DEM and f.horizon.mode is HorizonMode.FAR_FIELD
+    e = f.horizon.h_lb_deg - d.horizon.h_lb_deg
+    assert np.sqrt(np.mean(e ** 2)) < 2.0 and np.abs(e).max() < 8.0                           # holgura sobre el RMS 0,68° / máx. 5,8° medidos
+    assert abs(f.metrics.solar_fraction - d.metrics.solar_fraction) < 0.25   # el punto por defecto de Site23 está en una cresta: 0,19 (peor caso medido)
 
 
 @pytest.mark.needs_dem

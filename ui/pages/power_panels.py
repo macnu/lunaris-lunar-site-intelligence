@@ -251,6 +251,8 @@ if err:
     C.show_error(err)
     st.stop()
 C.result_header(res)
+if res.observer.mode is HorizonMode.FAR_FIELD:
+    st.warning(f"**{C.FAR_LABEL}.** La potencia usa el horizonte del DEM de 80 m. " + C.far_field_note(), icon=":material/terrain:")
 if res.observer.mode is HorizonMode.SMOOTH_SPHERE:
     st.warning("**Este lugar no tiene datos de terreno (esfera lisa).** La potencia se calcula igualmente, con horizonte plano "
                "(solo la curvatura lunar): sin montañas que den sombra, así que el resultado es optimista.", icon=":material/public:")

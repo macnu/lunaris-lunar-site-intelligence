@@ -14,6 +14,7 @@ curvatura transversal (cuadrática en la celda): con paso p/2 el error de altura
 """
 from __future__ import annotations
 
+import dataclasses
 import math
 from pathlib import Path
 from typing import Optional
@@ -83,7 +84,7 @@ def _upper_bound_tan(s_lo: FloatArray, s_hi: float, z_up: float, z0: float) -> F
 def compute_horizon(window: DemWindow, observer: ObserverPoint, params: HorizonParams,
                     sigma_window: Optional[DemWindow] = None, sigma_sign: int = 0, k_sigma: float = 0.0,
                     cache_dir: Optional[Path] = None, far: Optional[DemWindow] = None,
-                    far_step_m: Optional[float] = None) -> HorizonResult:
+                    far_step_m: Optional[float] = None, mode: HorizonMode = HorizonMode.DEM) -> HorizonResult:
     """Horizonte exacto con curvatura (H_lb, r_cov, limited, opcional H_ub); sigma_sign=±1 aplica z±k·σz (TOTERR).
 
     La altura del observador es ``params.observer_height_m`` (entra en la clave de caché). El suelo z0 se muestrea del
@@ -92,12 +93,13 @@ def compute_horizon(window: DemWindow, observer: ObserverPoint, params: HorizonP
     ``far``: DEM lejano (p. ej. LOLA 80 m, ``loader.load_far_field``) usado donde ``window`` no tiene dato válido; si
     el observador no está en ``window`` el suelo z0 sale de ``far``. El σ solo corrige las muestras de ``window``.
     ``r_cov_m`` es el alcance combinado (primera muestra sin dato en ninguno de los dos DEM).
+    ``mode``: etiqueta del resultado y de la clave de caché (``FAR_FIELD`` lo usa ``compute_horizon_far_field``).
     """
     use_sigma = sigma_sign != 0 and k_sigma != 0.0
     if use_sigma and sigma_window is None:
         raise ValueError("sigma_sign≠0 requiere sigma_window")
     sha = window.meta.sha256 if window.meta is not None else None
-    key = cache.horizon_key(sha, HorizonMode.DEM, observer.x_m, observer.y_m, params)
+    key = cache.horizon_key(sha, mode, observer.x_m, observer.y_m, params)
     # La ventana recortada limita la cobertura: forma parte de la clave (sha es del fichero entero).
     ext = (window.x0_m, window.y0_m, window.pixel_size_m, *window.data.shape)
     sig = (sigma_window.meta.sha256 if sigma_window is not None and sigma_window.meta else None, sigma_sign, k_sigma) if use_sigma else None
@@ -114,7 +116,7 @@ def compute_horizon(window: DemWindow, observer: ObserverPoint, params: HorizonP
     if cacheable:
         hit = cache.load_npz(cache_dir, _KIND, key)
         if hit is not None:
-            return _build(hit, observer, params, hs, key, sha, fsha)
+            return _build(hit, observer, params, hs, key, sha, fsha, mode)
 
     x0, y0 = observer.x_m, observer.y_m
     g0, ok0 = sample_bilinear(window, np.array([x0]), np.array([y0]))
@@ -189,7 +191,18 @@ def compute_horizon(window: DemWindow, observer: ObserverPoint, params: HorizonP
         arrays["h_ub_deg"] = h_ub
     if cacheable:
         cache.save_npz(cache_dir, _KIND, key, arrays)
-    return _build(arrays, observer, params, hs, key, sha, fsha)
+    return _build(arrays, observer, params, hs, key, sha, fsha, mode)
+
+
+def compute_horizon_far_field(far: DemWindow, observer: ObserverPoint, params: HorizonParams,
+                              cache_dir: Optional[Path] = None) -> HorizonResult:
+    """Horizonte con el DEM polar de 80 m como ÚNICA fuente (puntos fuera de los recortes de 5 m). El suelo del observador sale
+    del propio 80 m y el paso radial es ½ píxel (40 m): un paso de 5 m no añade información a un DEM de 80 m y multiplica el
+    coste por 8. Es un horizonte APROXIMADO (80 m suaviza paredes de cráter; ver docs/validation/horizonte-campo-lejano.md);
+    ``mode = FAR_FIELD`` y la clave de caché es distinta de la del modo DEM."""
+    p = dataclasses.replace(params, radial_step_m=far.pixel_size_m / 2.0)
+    h = compute_horizon(far, observer, p, cache_dir=cache_dir, mode=HorizonMode.FAR_FIELD)
+    return dataclasses.replace(h, far_sha256=h.dem_sha256)
 
 
 def _dir(observer: ObserverPoint, az: FloatArray) -> tuple[FloatArray, FloatArray]:
@@ -197,11 +210,11 @@ def _dir(observer: ObserverPoint, az: FloatArray) -> tuple[FloatArray, FloatArra
     return ray_direction(observer.lon_deg_e, az)
 
 
-def _build(a, observer, params, hs, key, sha, far_sha=None) -> HorizonResult:
+def _build(a, observer, params, hs, key, sha, far_sha=None, mode=HorizonMode.DEM) -> HorizonResult:
     r = np.asarray(a["r_cov_m"], float)
     return HorizonResult(
         az_deg=np.asarray(a["az_deg"], float), h_lb_deg=np.asarray(a["h_lb_deg"], float), r_cov_m=r,
-        limited=np.asarray(a["limited"], bool), mode=HorizonMode.DEM, observer=observer, params=params,
+        limited=np.asarray(a["limited"], bool), mode=mode, observer=observer, params=params,
         h_sphere_deg=hs, cache_key=key, h_ub_deg=np.asarray(a["h_ub_deg"], float) if "h_ub_deg" in a else None,
         dem_sha256=sha, cov_min_m=float(r.min()), cov_median_m=float(np.median(r)), far_sha256=far_sha)
 
