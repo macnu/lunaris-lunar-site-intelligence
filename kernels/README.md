@@ -6,7 +6,7 @@ Esta carpeta contiene los kernels de NAIF/JPL que usa LSI. **No se versionan** (
 python scripts/fetch_data.py
 ```
 
-El script baja también los DEM (≈ 0,8 GB); los kernels son ≈ 18 MB. Servidor: https://naif.jpl.nasa.gov/pub/naif/generic_kernels/. Las rutas y el orden de carga están en `config/simulation.json` (`frames.kernels`).
+El script baja también los DEM (≈ 0,82 GB en total); los seis kernels pesan 18,7 MB. Tras cada descarga comprueba el SHA-256 contra `config/data_manifest.json` (los mismos hashes de la tabla de abajo) y falla con un mensaje claro si no coincide; `python scripts/data_manifest.py` verifica todo lo presente (kernels, DEM, gazetteer) sin descargar nada. Servidor: https://naif.jpl.nasa.gov/pub/naif/generic_kernels/. Las rutas y el orden de carga están en `config/simulation.json` (`frames.kernels`).
 
 ## Condiciones de uso
 
@@ -36,11 +36,15 @@ Hashes completos (la tabla abrevia el principio y el final):
 3dff7b1dbeceaa01f25467767d3fa25816051c85d162d1edf04acb310ee28bb1  pck00011.tpc
 ```
 
-Comprueba los tuyos con `Get-FileHash kernels\* -Algorithm SHA256`. Si NAIF publica una versión nueva de un kernel, el hash cambiará: no es necesariamente un error, pero conviene revisar `docs/science/luna-spice-sitios.md`.
+Comprueba los tuyos con `python scripts/data_manifest.py` o con `Get-FileHash kernels\* -Algorithm SHA256` (el 14/11/2026 los seis dieron `ok`). Si NAIF publica una versión nueva de un kernel, el hash cambiará: no es necesariamente un error, pero conviene revisar `docs/science/luna-spice-sitios.md`.
 
 ## Cobertura temporal efectiva: 1900–2050
 
 El límite lo pone el kernel de orientación lunar, no las efemérides: el SPK DE421 llega a 2053-10-08, pero el BPC termina el 2050-12-31 23:58:51. Fuera de ese rango SPICE lanza `SPICE(FRAMEDATANOTFOUND)`. LSI limita la interfaz a 1900-01-02 – 2050-12-30 (margen por tiempo luz, `config/simulation.json: time`) y traduce el fallo a un error claro. Fuera de rango existe `IAU_MOON` (con 4″–10″, ~35-85 m, de diferencia respecto a `MOON_ME` en 2026-2045), pero LSI no lo usa.
+
+## Solo para validar (no son parte de `kernels/`)
+
+Los dos PCK binarios de orientación de la Tierra (ITRF93: `earth_latest_high_prec.bpc`, 5,2 MB, y `earth_2026_260806_2126_predict.bpc`, 19,2 MB) viven en `data/raw/earth/`, no aquí, y solo los usa `tests/test_independent_link.py` (37 pruebas; se omiten si faltan). El motor orienta la Tierra con `IAU_EARTH` de `pck00011.tpc` (0,072° frente a Horizons). Las condiciones de uso de NAIF de arriba también les valen.
 
 ## Conjunto mínimo y marcos
 
