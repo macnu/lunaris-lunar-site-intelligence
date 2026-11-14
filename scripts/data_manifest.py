@@ -14,10 +14,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT =Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "config" / "data_manifest.json"
 GLOBS = ("data/raw/shackleton/*_5mpp_*.tif", "data/raw/de_gerlache/*_5mpp_*.tif", "data/raw/malapert/*_5mpp_*.tif",
          "data/raw/lola80s/LDEM_80S_80MPP_ADJ.TIF", "kernels/*.tls", "kernels/*.tpc", "kernels/*.tf", "kernels/*.bpc", "kernels/*.bsp")
@@ -37,7 +38,9 @@ def sha256(path: Path) -> str:
 
 
 def _key(path: Path) -> str:
-    p = Path(path).resolve()
+    # abspath normaliza sin resolver enlaces simbólicos ni uniones: en un worktree, data/ puede ser un enlace
+    # al directorio de datos de otra copia y la clave debe seguir siendo relativa a la raíz del repo.
+    p = Path(os.path.abspath(path))
     try:
         return p.relative_to(ROOT).as_posix()
     except ValueError:
