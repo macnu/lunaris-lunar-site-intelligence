@@ -135,7 +135,13 @@ def test_regions_known_overlaps_with_lola_dems():
     assert by["de_gerlache_rim_1"]["centro_lon_deg_e"] == pytest.approx(292.068, abs=0.01)
     only24 = [r for r in REGIONS if r["listas"] == ["2024"]]
     assert {r["id"] for r in only24} == {"peak_near_cabeus_b", "mons_mouton", "mons_mouton_plateau", "slater_plain"}
-    assert all(r["centro_lat_deg"] is None for r in only24)                                 # sin coordenadas inventadas
+    # las 4 regiones solo de 2024 salen de la figura oficial de NASA (NTRS 20250011660), no se inventan
+    assert all(r["fuente_coordenadas"] == "figura_nasa_2024" and "digitalizado" in r["confianza"] for r in only24)
+    assert all(-90 < r["centro_lat_deg"] < -83 for r in only24)
+    mm, lbp = by["mons_mouton"], by["leibnitz_beta_plateau"]                               # misma posición, otro nombre (a verificar)
+    assert float(np.hypot(mm["centro_xy_m"][0] - lbp["centro_xy_m"][0], mm["centro_xy_m"][1] - lbp["centro_xy_m"][1])) < 2_500
+    for k in ("haworth", "malapert_massif", "de_gerlache_rim_2", "nobile_rim_1", "nobile_rim_2"):  # figura 2024 vs huella SDEM
+        assert by[k]["centro_figura_nasa_2024"]["diferencia_con_sdem_km"] < 2.5, k
 
 
 def test_sites_json_matches_regions_and_catalog_loads():
@@ -143,11 +149,8 @@ def test_sites_json_matches_regions_and_catalog_loads():
     sites = {s.id: s for s in catalog.load_sites(ROOT / "config" / "sites.json")}
     for r in REGIONS:
         s = sites["artemis3_" + r["id"]]
-        if r["centro_lat_deg"] is None:
-            assert s.lat_deg is None and s.confidence == "a verificar"
-        else:
-            assert s.lat_deg == pytest.approx(r["centro_lat_deg"]) and (s.lon_deg_e % 360) == pytest.approx(r["centro_lon_deg_e"], abs=1e-3)
-            assert s.confidence == "aprox" and "SDEM" in s.source
+        assert s.lat_deg == pytest.approx(r["centro_lat_deg"]) and (s.lon_deg_e % 360) == pytest.approx(r["centro_lon_deg_e"], abs=1e-3)
+        assert s.confidence == "aprox" and ("SDEM" in s.source or "figura oficial de NASA" in s.source)
 
 
 # ---- datos reales (se saltan si no se han descargado) -------------------------------------------------------------

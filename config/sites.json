@@ -1,5 +1,5 @@
 {
- "_nota": "lon este-positiva, lat planetocéntrica en grados, MOON_ME. lat/lon null = a verificar, no seleccionable. Sitios sin DEM: modo esfera lisa. Los GeoTIFF se descubren por glob data/raw/*/{dem_prefix}_final_adj_5mpp_*.tif (la clave dem_dir se eliminó: era un marcador obsoleto). Site04 y Site11 tienen coordenadas fuera de su recorte: ver dem_default_observers en simulation.json. Regiones Artemis III: 13 de la lista de 2022 con centro derivado de la huella SDEM (aprox) y 4 solo de la lista de 2024 sin coordenadas (null).",
+ "_nota": "lon este-positiva, lat planetocéntrica en grados, MOON_ME. lat/lon null = a verificar, no seleccionable. Sitios sin DEM: modo esfera lisa. Los GeoTIFF se descubren por glob data/raw/*/{dem_prefix}_final_adj_5mpp_*.tif (la clave dem_dir se eliminó: era un marcador obsoleto). Site04 y Site11 tienen coordenadas fuera de su recorte: ver dem_default_observers en simulation.json. Regiones Artemis III: 13 de la lista de 2022 con centro derivado de la huella SDEM (aprox) y 4 solo de la lista de 2024 con centro digitalizado de la figura oficial de NASA (aprox, ±~2 km).",
  "sites": [
   {
    "id": "site04",
@@ -393,48 +393,48 @@
    "nombre": "Peak Near Cabeus B (región candidata Artemis III)",
    "programa": "NASA Artemis III (candidata, 2024)",
    "fecha": null,
-   "lat": null,
-   "lon": null,
-   "fuente": "Lista NASA de nueve regiones (27/10/2024, RELEASE24-136). Sin coordenadas publicadas y sin SDEM",
-   "confianza": "a verificar",
+   "lat": -83.624,
+   "lon": -68.778,
+   "fuente": "Digitalizado de la figura oficial de NASA de las nueve regiones (George et al., NTRS 20250011660, Image 1; crédito NASA/GSFC/ASU/JSC/AGDT), convertido con stereo_inverse. NASA no publica lat/lon. Incertidumbre ~±2 km. Detalle en config/artemis_regions.json y docs/validation/coordenadas-artemis.md",
+   "confianza": "aprox",
    "has_dem": false,
-   "nota": "Solo en la lista de 2024. No usar hasta tener lat/lon. Hay una pista (rasgo homónimo del gazetteer) en config/artemis_regions.json, no es la región."
+   "nota": "Solo en la lista de 2024. Centro de la caja dibujada por NASA (20,8 x 21,3 km), no un punto de aterrizaje."
   },
   {
    "id": "artemis3_mons_mouton",
    "nombre": "Mons Mouton (región candidata Artemis III)",
    "programa": "NASA Artemis III (candidata, 2024)",
    "fecha": null,
-   "lat": null,
-   "lon": null,
-   "fuente": "Lista NASA de nueve regiones (27/10/2024, RELEASE24-136). Sin coordenadas publicadas y sin SDEM",
-   "confianza": "a verificar",
+   "lat": -85.418,
+   "lon": 31.442,
+   "fuente": "Digitalizado de la figura oficial de NASA de las nueve regiones (George et al., NTRS 20250011660, Image 1; crédito NASA/GSFC/ASU/JSC/AGDT), convertido con stereo_inverse. NASA no publica lat/lon. Incertidumbre ~±2 km. Detalle en config/artemis_regions.json y docs/validation/coordenadas-artemis.md",
+   "confianza": "aprox",
    "has_dem": false,
-   "nota": "Solo en la lista de 2024. No usar hasta tener lat/lon. Hay una pista (rasgo homónimo del gazetteer) en config/artemis_regions.json, no es la región."
+   "nota": "Solo en la lista de 2024. Centro de la caja dibujada por NASA (17,5 x 18,5 km), no un punto de aterrizaje. Coincide geométricamente (<1 km) con Leibnitz Beta Plateau (2022); equivalencia a verificar, NASA no la declara."
   },
   {
    "id": "artemis3_mons_mouton_plateau",
    "nombre": "Mons Mouton Plateau (región candidata Artemis III)",
    "programa": "NASA Artemis III (candidata, 2024)",
    "fecha": null,
-   "lat": null,
-   "lon": null,
-   "fuente": "Lista NASA de nueve regiones (27/10/2024, RELEASE24-136). Sin coordenadas publicadas y sin SDEM",
-   "confianza": "a verificar",
+   "lat": -84.296,
+   "lon": 30.417,
+   "fuente": "Digitalizado de la figura oficial de NASA de las nueve regiones (George et al., NTRS 20250011660, Image 1; crédito NASA/GSFC/ASU/JSC/AGDT), convertido con stereo_inverse. NASA no publica lat/lon. Incertidumbre ~±2 km. Detalle en config/artemis_regions.json y docs/validation/coordenadas-artemis.md",
+   "confianza": "aprox",
    "has_dem": false,
-   "nota": "Solo en la lista de 2024. No usar hasta tener lat/lon. Hay una pista (rasgo homónimo del gazetteer) en config/artemis_regions.json, no es la región."
+   "nota": "Solo en la lista de 2024. Centro de la caja dibujada por NASA (78,3 x 57,2 km), no un punto de aterrizaje. La caja de NASA es una meseta grande, no de 15 km: el centro es orientativo."
   },
   {
    "id": "artemis3_slater_plain",
    "nombre": "Slater Plain (región candidata Artemis III)",
    "programa": "NASA Artemis III (candidata, 2024)",
    "fecha": null,
-   "lat": null,
-   "lon": null,
-   "fuente": "Lista NASA de nueve regiones (27/10/2024, RELEASE24-136). Sin coordenadas publicadas y sin SDEM",
-   "confianza": "a verificar",
+   "lat": -87.152,
+   "lon": 125.208,
+   "fuente": "Digitalizado de la figura oficial de NASA de las nueve regiones (George et al., NTRS 20250011660, Image 1; crédito NASA/GSFC/ASU/JSC/AGDT), convertido con stereo_inverse. NASA no publica lat/lon. Incertidumbre ~±2 km. Detalle en config/artemis_regions.json y docs/validation/coordenadas-artemis.md",
+   "confianza": "aprox",
    "has_dem": false,
-   "nota": "Solo en la lista de 2024. No usar hasta tener lat/lon. Hay una pista (rasgo homónimo del gazetteer) en config/artemis_regions.json, no es la región."
+   "nota": "Solo en la lista de 2024. Centro de la caja dibujada por NASA (20,8 x 21,3 km), no un punto de aterrizaje."
   }
  ]
 }

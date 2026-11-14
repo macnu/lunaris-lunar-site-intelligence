@@ -90,3 +90,15 @@ out = combine_with_sdem("Site23", sdem_pack)   # sdem_pack = dict de sdem.terrai
 Lectura: «rasgo más cercano» solo orienta; las regiones son bordes y macizos, no centros de cráter, por eso distan decenas de km. Cabeus B (−82,3°) queda fuera de «a menos de 6° del polo» de NASA: la pista de Peak Near Cabeus B es dudosa. Con SDEM (otro agente, `fetch_sdem.py`): Malapert Massif, de Gerlache Rim 1 y Peak Near Shackleton; el SDEM de las otras 10 regiones no se ha descargado.
 
 `config/sites.json`: las 13 entradas `artemis3_*` pasan de `null` a las coordenadas anteriores (`confianza: aprox`, fuente y nota); se añaden 4 entradas con `null` para las regiones solo de 2024 (36 entradas, 32 con coordenadas ⇒ el buscador pasa de 9106 a 9119 lugares). Cambio en tests: `test_catalog` 32 → 36 entradas y `test_gazetteer` 19 → 32 sitios y `9087 + 19` → `9087 + 32` (consecuencia directa).
+
+## 4. Actualización: coordenadas con fuente (14/11/2026)
+
+Se buscaron coordenadas oficiales de las regiones. **NASA no publica lat/lon** (release 2022, release 2024, SVS 5013, NTRS 20250011660 e informe del SDT: sin coordenadas). Cambios respecto a §3:
+
+- Las 4 regiones solo de la lista de 2024 (Peak Near Cabeus B, Mons Mouton, Mons Mouton Plateau, Slater Plain) **ya no están en `null`**: su centro y caja se digitalizaron de la figura oficial de NASA de las nueve regiones (George et al., NTRS 20250011660, Image 1) con un ajuste calibrado (RMS 0,77 km), incertidumbre ~±2 km, `confianza: aprox` y fuente en cada entrada. El catálogo tiene 36 entradas, las 36 con coordenadas; el buscador pasa de 9119 a 9123 lugares.
+- Las 13 regiones de 2022 mantienen el centro SDEM como valor principal. Cinco (Haworth, Malapert Massif, de Gerlache Rim 2, Nobile Rim 1, Nobile Rim 2) tienen además la medida de la figura NASA (`centro_figura_nasa_2024`): **difieren como máximo 1,6 km del SDEM**.
+- Auxiliar: centroides de los sitios candidatos de Wueller et al. (2026), fuente secundaria (hasta 6,3 km de diferencia; no son centros de región).
+- A verificar: Mons Mouton (2024) coincide geométricamente (0,8 km) con Leibnitz Beta Plateau (2022).
+- Pendiente: las rejillas oficiales USGS LGRS de las nueve regiones están tras un bloqueo anti-bots de ScienceBase y no se descargaron.
+
+Registro de fuentes, método y diferencias en km: [`coordenadas-artemis.md`](coordenadas-artemis.md). Cambios en tests: `test_catalog` ya no espera ninguna entrada sin coordenadas; `test_gazetteer` 32 a 36 sitios y `9087 + 32` a `9087 + 36` (consecuencia directa de rellenar las 4 regiones); `test_imagery` comprueba fuentes y coherencia con el SDEM.

@@ -1,9 +1,11 @@
 {
- "_nota": "Regiones candidatas Artemis III. Lista de 13 (NASA, release 22-089, 19-ago-2022) + las 4 que SOLO figuran en la de nueve (RELEASE24-136, oct-2024). lon este-positiva 0..360, lat planetocéntrica, MOON_ME. caja = huella del SDEM (mayor que los 15 km oficiales). Regenerar: python scripts/fetch_imagery.py --regions --yes",
+ "_nota": "Regiones candidatas Artemis III. Lista de 13 (NASA, release 22-089, 19-ago-2022) + las 4 que SOLO figuran en la de nueve (RELEASE24-136, oct-2024). lon este-positiva 0..360, lat planetocéntrica, MOON_ME. caja = huella del SDEM (mayor que los 15 km oficiales). Los campos centro_figura_nasa_2024, centro_sitios_wueller2026, fuente_coordenadas y el relleno de las 4 regiones solo de 2024 se añadieron a mano (docs/validation/coordenadas-artemis.md); regenerar con scripts/fetch_imagery.py --regions --yes los SOBREESCRIBE",
  "fuentes": [
   "https://www.nasa.gov/news-release/nasa-identifies-candidate-regions-for-landing-next-americans-on-moon/",
   "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/",
-  "https://zenodo.org/records/17954508"
+  "https://zenodo.org/records/17954508",
+  "https://ntrs.nasa.gov/citations/20250011660",
+  "https://zenodo.org/records/17084058"
  ],
  "generado": "2026-11-14T20:24:05+00:00",
  "bytes_leidos": 7951064,
@@ -42,7 +44,18 @@
     "tipo": "Crater",
     "distancia_km": 21.0
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "centro_sitios_wueller2026": {
+    "lat_deg": -84.423,
+    "lon_deg_e": 68.692,
+    "n_sitios": 10,
+    "extension_xy_km": [
+     15.5,
+     7.9
+    ],
+    "diferencia_con_principal_km": 6.3,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "nobile_rim_2",
@@ -79,7 +92,28 @@
     "tipo": "Crater",
     "distancia_km": 31.6
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "centro_figura_nasa_2024": {
+    "lat_deg": -83.929,
+    "lon_deg_e": 58.708,
+    "caja_lado_km": [
+     20.8,
+     20.8
+    ],
+    "diferencia_con_sdem_km": 0.8,
+    "fuente": "Figura NASA de las nueve regiones (NTRS 20250011660); ver docs/validation/coordenadas-artemis.md"
+   },
+   "centro_sitios_wueller2026": {
+    "lat_deg": -84.072,
+    "lon_deg_e": 58.403,
+    "n_sitios": 9,
+    "extension_xy_km": [
+     15.2,
+     14.7
+    ],
+    "diferencia_con_principal_km": 3.8,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "haworth",
@@ -116,7 +150,28 @@
     "tipo": "Crater",
     "distancia_km": 33.8
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "centro_figura_nasa_2024": {
+    "lat_deg": -86.751,
+    "lon_deg_e": 337.193,
+    "caja_lado_km": [
+     31.0,
+     30.9
+    ],
+    "diferencia_con_sdem_km": 0.4,
+    "fuente": "Figura NASA de las nueve regiones (NTRS 20250011660); ver docs/validation/coordenadas-artemis.md"
+   },
+   "centro_sitios_wueller2026": {
+    "lat_deg": -86.896,
+    "lon_deg_e": 337.102,
+    "n_sitios": 11,
+    "extension_xy_km": [
+     23.7,
+     19.6
+    ],
+    "diferencia_con_principal_km": 4.0,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "faustini_rim_a",
@@ -152,7 +207,18 @@
     "tipo": "Crater",
     "distancia_km": 22.6
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "centro_sitios_wueller2026": {
+    "lat_deg": -87.995,
+    "lon_deg_e": 90.946,
+    "n_sitios": 8,
+    "extension_xy_km": [
+     12.8,
+     17.2
+    ],
+    "diferencia_con_principal_km": 3.4,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "de_gerlache_rim_2",
@@ -189,7 +255,28 @@
     "tipo": "Crater",
     "distancia_km": 21.8
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "centro_figura_nasa_2024": {
+    "lat_deg": -88.238,
+    "lon_deg_e": 295.582,
+    "caja_lado_km": [
+     20.8,
+     21.3
+    ],
+    "diferencia_con_sdem_km": 0.3,
+    "fuente": "Figura NASA de las nueve regiones (NTRS 20250011660); ver docs/validation/coordenadas-artemis.md"
+   },
+   "centro_sitios_wueller2026": {
+    "lat_deg": -88.229,
+    "lon_deg_e": 291.213,
+    "n_sitios": 7,
+    "extension_xy_km": [
+     13.6,
+     13.5
+    ],
+    "diferencia_con_principal_km": 3.9,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "connecting_ridge_extension",
@@ -225,7 +312,18 @@
     "tipo": "Crater",
     "distancia_km": 7.5
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "centro_sitios_wueller2026": {
+    "lat_deg": -88.973,
+    "lon_deg_e": 253.903,
+    "n_sitios": 6,
+    "extension_xy_km": [
+     17.9,
+     10.5
+    ],
+    "diferencia_con_principal_km": 2.8,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "connecting_ridge",
@@ -261,7 +359,18 @@
     "tipo": "Crater",
     "distancia_km": 13.9
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "centro_sitios_wueller2026": {
+    "lat_deg": -89.504,
+    "lon_deg_e": 224.61,
+    "n_sitios": 9,
+    "extension_xy_km": [
+     11.3,
+     8.4
+    ],
+    "diferencia_con_principal_km": 1.4,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "nobile_rim_1",
@@ -298,7 +407,28 @@
     "tipo": "Crater",
     "distancia_km": 12.6
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "centro_figura_nasa_2024": {
+    "lat_deg": -85.487,
+    "lon_deg_e": 37.58,
+    "caja_lado_km": [
+     21.4,
+     18.5
+    ],
+    "diferencia_con_sdem_km": 1.6,
+    "fuente": "Figura NASA de las nueve regiones (NTRS 20250011660); ver docs/validation/coordenadas-artemis.md"
+   },
+   "centro_sitios_wueller2026": {
+    "lat_deg": -85.333,
+    "lon_deg_e": 37.24,
+    "n_sitios": 9,
+    "extension_xy_km": [
+     10.1,
+     12.0
+    ],
+    "diferencia_con_principal_km": 3.2,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "peak_near_shackleton",
@@ -334,7 +464,18 @@
     "tipo": "Crater",
     "distancia_km": 24.3
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "centro_sitios_wueller2026": {
+    "lat_deg": -88.92,
+    "lon_deg_e": 127.425,
+    "n_sitios": 6,
+    "extension_xy_km": [
+     7.5,
+     8.9
+    ],
+    "diferencia_con_principal_km": 4.0,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "de_gerlache_rim_1",
@@ -370,7 +511,18 @@
     "tipo": "Crater",
     "distancia_km": 16.3
    },
-   "dem_lola_5m_sitio": "Site11"
+   "dem_lola_5m_sitio": "Site11",
+   "centro_sitios_wueller2026": {
+    "lat_deg": -88.652,
+    "lon_deg_e": 294.574,
+    "n_sitios": 6,
+    "extension_xy_km": [
+     12.1,
+     13.6
+    ],
+    "diferencia_con_principal_km": 2.0,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "leibnitz_beta_plateau",
@@ -443,7 +595,28 @@
     "tipo": "Mons",
     "distancia_km": 3.1
    },
-   "dem_lola_5m_sitio": "Site23"
+   "dem_lola_5m_sitio": "Site23",
+   "centro_figura_nasa_2024": {
+    "lat_deg": -85.984,
+    "lon_deg_e": 359.724,
+    "caja_lado_km": [
+     22.0,
+     21.9
+    ],
+    "diferencia_con_sdem_km": 0.3,
+    "fuente": "Figura NASA de las nueve regiones (NTRS 20250011660); ver docs/validation/coordenadas-artemis.md"
+   },
+   "centro_sitios_wueller2026": {
+    "lat_deg": -86.166,
+    "lon_deg_e": 0.149,
+    "n_sitios": 5,
+    "extension_xy_km": [
+     13.7,
+     10.8
+    ],
+    "diferencia_con_principal_km": 5.2,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "de_gerlache_kocher_massif",
@@ -479,7 +652,18 @@
     "tipo": "Mons",
     "distancia_km": 11.9
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "centro_sitios_wueller2026": {
+    "lat_deg": -85.833,
+    "lon_deg_e": 244.641,
+    "n_sitios": 7,
+    "extension_xy_km": [
+     8.4,
+     14.8
+    ],
+    "diferencia_con_principal_km": 2.1,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "peak_near_cabeus_b",
@@ -487,22 +671,53 @@
    "listas": [
     "2024"
    ],
-   "centro_lat_deg": null,
-   "centro_lon_deg_e": null,
-   "centro_xy_m": null,
-   "caja_xy_m": null,
+   "centro_lat_deg": -83.624,
+   "centro_lon_deg_e": 291.222,
+   "centro_xy_m": [
+    -180400.0,
+    70100.0
+   ],
+   "caja_xy_m": [
+    -190800.0,
+    59400.0,
+    -170000.0,
+    80700.0
+   ],
    "tamano_oficial_nasa_km": 15,
    "sdem_zip": null,
-   "fuente": "Lista de nueve regiones de NASA (27-oct-2024, RELEASE24-136); sin coordenadas ni SDEM.",
-   "confianza": "sin coordenadas verificadas",
+   "fuente": "Centro y caja digitalizados de la figura oficial de NASA de las nueve regiones. Figura 'The 9 candidate landing regions' (Credit: NASA), Image 1 de George et al., 'Artemis III Site Selection Update: Downselection From Thirteen to Nine Candidate Regions', NASA NTRS 20250011660 (LPSC 2026), https://ntrs.nasa.gov/citations/20250011660. Cajas amarillas leídas del PNG y convertidas con un ajuste de semejanza (escala 1,779 px/km, giro 0,11°, RMS 0,77 km) calibrado con la estrella del polo sur y 5 regiones comunes con el SDEM. Incertidumbre ~±2 km. NASA no publica latitud/longitud de estas regiones; confirmado de forma independiente (a 4-5 km, salvo la meseta) con los puntos de aterrizaje de Wueller et al. (2026, Zenodo 10.5281/zenodo.17084058).",
+   "confianza": "digitalizado de figura oficial NASA (±~2 km); no es una coordenada publicada",
    "pista_gazetteer": {
     "nombre": "Cabeus B",
     "feature_id": 8058,
     "tipo": "Satellite Feature",
     "lat_deg": -82.2587,
-    "lon_deg_e": 305.41540000000003
+    "lon_deg_e": 305.41540000000003,
+    "nota": "El rasgo 'Cabeus B' del gazetteer USGS queda a ~67 km del centro de la región en la figura NASA: es la referencia del nombre ('peak near'), no la región"
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "caja_lado_km": [
+    20.8,
+    21.3
+   ],
+   "fuente_coordenadas": "figura_nasa_2024",
+   "rasgo_cercano": {
+    "nombre": "Cabeus B",
+    "feature_id": 8058,
+    "tipo": "Satellite Feature",
+    "distancia_km": 66.9
+   },
+   "centro_sitios_wueller2026": {
+    "lat_deg": -83.769,
+    "lon_deg_e": 290.924,
+    "n_sitios": 5,
+    "extension_xy_km": [
+     8.3,
+     15.2
+    ],
+    "diferencia_con_principal_km": 4.5,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "mons_mouton",
@@ -510,14 +725,22 @@
    "listas": [
     "2024"
    ],
-   "centro_lat_deg": null,
-   "centro_lon_deg_e": null,
-   "centro_xy_m": null,
-   "caja_xy_m": null,
+   "centro_lat_deg": -85.418,
+   "centro_lon_deg_e": 31.442,
+   "centro_xy_m": [
+    72500.0,
+    118600.0
+   ],
+   "caja_xy_m": [
+    63800.0,
+    109300.0,
+    81200.0,
+    127900.0
+   ],
    "tamano_oficial_nasa_km": 15,
    "sdem_zip": null,
-   "fuente": "Lista de nueve regiones de NASA (27-oct-2024, RELEASE24-136); sin coordenadas ni SDEM.",
-   "confianza": "sin coordenadas verificadas",
+   "fuente": "Centro y caja digitalizados de la figura oficial de NASA de las nueve regiones. Figura 'The 9 candidate landing regions' (Credit: NASA), Image 1 de George et al., 'Artemis III Site Selection Update: Downselection From Thirteen to Nine Candidate Regions', NASA NTRS 20250011660 (LPSC 2026), https://ntrs.nasa.gov/citations/20250011660. Cajas amarillas leídas del PNG y convertidas con un ajuste de semejanza (escala 1,779 px/km, giro 0,11°, RMS 0,77 km) calibrado con la estrella del polo sur y 5 regiones comunes con el SDEM. Incertidumbre ~±2 km. NASA no publica latitud/longitud de estas regiones; confirmado de forma independiente (a 4-5 km, salvo la meseta) con los puntos de aterrizaje de Wueller et al. (2026, Zenodo 10.5281/zenodo.17084058).",
+   "confianza": "digitalizado de figura oficial NASA (±~2 km); no es una coordenada publicada",
    "pista_gazetteer": {
     "nombre": "Mons Mouton",
     "feature_id": 16070,
@@ -525,7 +748,33 @@
     "lat_deg": -84.60000000000001,
     "lon_deg_e": 31.0
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "caja_lado_km": [
+    17.5,
+    18.5
+   ],
+   "fuente_coordenadas": "figura_nasa_2024",
+   "rasgo_cercano": {
+    "nombre": "Jaci",
+    "feature_id": 16268,
+    "tipo": "Crater",
+    "distancia_km": 0.8
+   },
+   "centro_sitios_wueller2026": {
+    "lat_deg": -85.537,
+    "lon_deg_e": 31.18,
+    "n_sitios": 10,
+    "extension_xy_km": [
+     13.3,
+     13.3
+    ],
+    "diferencia_con_principal_km": 3.9,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   },
+   "equivale_a_2022": {
+    "region": "leibnitz_beta_plateau",
+    "evidencia": "geométrica, no nombrada por NASA: centro de la caja de la figura 2024 a 0,8 km del centro SDEM de Leibnitz Beta Plateau (2022); a verificar"
+   }
   },
   {
    "id": "mons_mouton_plateau",
@@ -533,14 +782,22 @@
    "listas": [
     "2024"
    ],
-   "centro_lat_deg": null,
-   "centro_lon_deg_e": null,
-   "centro_xy_m": null,
-   "caja_xy_m": null,
+   "centro_lat_deg": -84.296,
+   "centro_lon_deg_e": 30.417,
+   "centro_xy_m": [
+    87600.0,
+    149300.0
+   ],
+   "caja_xy_m": [
+    48500.0,
+    120700.0,
+    126800.0,
+    177900.0
+   ],
    "tamano_oficial_nasa_km": 15,
    "sdem_zip": null,
-   "fuente": "Lista de nueve regiones de NASA (27-oct-2024, RELEASE24-136); sin coordenadas ni SDEM.",
-   "confianza": "sin coordenadas verificadas",
+   "fuente": "Centro y caja digitalizados de la figura oficial de NASA de las nueve regiones. Figura 'The 9 candidate landing regions' (Credit: NASA), Image 1 de George et al., 'Artemis III Site Selection Update: Downselection From Thirteen to Nine Candidate Regions', NASA NTRS 20250011660 (LPSC 2026), https://ntrs.nasa.gov/citations/20250011660. Cajas amarillas leídas del PNG y convertidas con un ajuste de semejanza (escala 1,779 px/km, giro 0,11°, RMS 0,77 km) calibrado con la estrella del polo sur y 5 regiones comunes con el SDEM. Incertidumbre ~±2 km. NASA no publica latitud/longitud de estas regiones; confirmado de forma independiente (a 4-5 km, salvo la meseta) con los puntos de aterrizaje de Wueller et al. (2026, Zenodo 10.5281/zenodo.17084058).",
+   "confianza": "digitalizado de figura oficial NASA (±~2 km); no es una coordenada publicada",
    "pista_gazetteer": {
     "nombre": "Mons Mouton",
     "feature_id": 16070,
@@ -548,7 +805,29 @@
     "lat_deg": -84.60000000000001,
     "lon_deg_e": 31.0
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "caja_lado_km": [
+    78.3,
+    57.2
+   ],
+   "fuente_coordenadas": "figura_nasa_2024",
+   "rasgo_cercano": {
+    "nombre": "Mons Mouton",
+    "feature_id": 16070,
+    "tipo": "Mons",
+    "distancia_km": 9.4
+   },
+   "centro_sitios_wueller2026": {
+    "lat_deg": -84.699,
+    "lon_deg_e": 30.656,
+    "n_sitios": 11,
+    "extension_xy_km": [
+     55.6,
+     31.7
+    ],
+    "diferencia_con_principal_km": 12.2,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   },
   {
    "id": "slater_plain",
@@ -556,14 +835,22 @@
    "listas": [
     "2024"
    ],
-   "centro_lat_deg": null,
-   "centro_lon_deg_e": null,
-   "centro_xy_m": null,
-   "caja_xy_m": null,
+   "centro_lat_deg": -87.152,
+   "centro_lon_deg_e": 125.208,
+   "centro_xy_m": [
+    70600.0,
+    -49800.0
+   ],
+   "caja_xy_m": [
+    60200.0,
+    -60500.0,
+    81000.0,
+    -39100.0
+   ],
    "tamano_oficial_nasa_km": 15,
    "sdem_zip": null,
-   "fuente": "Lista de nueve regiones de NASA (27-oct-2024, RELEASE24-136); sin coordenadas ni SDEM.",
-   "confianza": "sin coordenadas verificadas",
+   "fuente": "Centro y caja digitalizados de la figura oficial de NASA de las nueve regiones. Figura 'The 9 candidate landing regions' (Credit: NASA), Image 1 de George et al., 'Artemis III Site Selection Update: Downselection From Thirteen to Nine Candidate Regions', NASA NTRS 20250011660 (LPSC 2026), https://ntrs.nasa.gov/citations/20250011660. Cajas amarillas leídas del PNG y convertidas con un ajuste de semejanza (escala 1,779 px/km, giro 0,11°, RMS 0,77 km) calibrado con la estrella del polo sur y 5 regiones comunes con el SDEM. Incertidumbre ~±2 km. NASA no publica latitud/longitud de estas regiones; confirmado de forma independiente (a 4-5 km, salvo la meseta) con los puntos de aterrizaje de Wueller et al. (2026, Zenodo 10.5281/zenodo.17084058).",
+   "confianza": "digitalizado de figura oficial NASA (±~2 km); no es una coordenada publicada",
    "pista_gazetteer": {
     "nombre": "Slater",
     "feature_id": 15325,
@@ -571,7 +858,29 @@
     "lat_deg": -88.0792,
     "lon_deg_e": 111.2881
    },
-   "dem_lola_5m_sitio": null
+   "dem_lola_5m_sitio": null,
+   "caja_lado_km": [
+    20.8,
+    21.3
+   ],
+   "fuente_coordenadas": "figura_nasa_2024",
+   "rasgo_cercano": {
+    "nombre": "Slater",
+    "feature_id": 15325,
+    "tipo": "Crater",
+    "distancia_km": 32.9
+   },
+   "centro_sitios_wueller2026": {
+    "lat_deg": -87.291,
+    "lon_deg_e": 126.606,
+    "n_sitios": 11,
+    "extension_xy_km": [
+     11.8,
+     15.9
+    ],
+    "diferencia_con_principal_km": 4.7,
+    "fuente": "Centroide de los puntos de aterrizaje candidatos del shapefile LandingSites de Wueller et al. (2026, JGR Planets 131(3) e2025JE009434; Zenodo 10.5281/zenodo.17084058). Fuente secundaria académica: NO es el centro oficial de la región"
+   }
   }
  ]
 }
