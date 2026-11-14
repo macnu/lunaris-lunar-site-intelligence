@@ -96,7 +96,7 @@ def _on_period() -> None:
 def _site_options(ctx: AppContext) -> tuple[list[str], dict[str, str], list[str]]:
     ok = [s for s in ctx.sites if s.lat_deg is not None and s.lon_deg_e is not None]
     ok.sort(key=lambda s: not s.has_dem)          # con DEM primero (destacados)
-    labels = {s.id: f"{s.name} — {'con relieve real (DEM)' if s.has_dem else 'sin DEM: esfera lisa'}" for s in ok}
+    labels = {s.id: f"{s.name} — {'con relieve real (DEM)' if s.has_dem else C.no_dem_label(s.lat_deg)}" for s in ok}
     opts = [s.id for s in ok]
     gaz = S.gaz_point()
     if gaz:
@@ -301,6 +301,9 @@ def _observer_status(ctx: AppContext) -> None:
         return
     if obs.mode is HorizonMode.DEM:
         st.success(f"Modo DEM: relieve real ({obs.dem_key}).", icon=":material/terrain:")
+    elif obs.mode is HorizonMode.FAR_FIELD:
+        st.warning(f"{C.FAR_LABEL}: horizonte aproximado, score parcial.", icon=":material/terrain:")
+        st.caption(C.far_field_note())
     else:
         st.warning("Modo esfera lisa: sin datos de terreno en este punto.", icon=":material/public:")
     if obs.snap_distance_km is not None:

@@ -235,8 +235,35 @@ def confidence_badge(level: Any) -> None:
     st.badge(f"Confianza {lv.value}", icon=icon, color=color, help=term_help("Confianza"))
 
 
+FAR_LABEL = "Relieve aproximado (80 m)"
+
+
+def far_field_note() -> str:
+    """Aviso del modo de 80 m con el error MEDIDO: la única fuente es ``lsi.pipeline.far_field_warning_text`` (nunca se copia la cifra)."""
+    from lsi.pipeline import far_field_warning_text
+    return (far_field_warning_text() + " Es optimista cerca de crestas, cimas y bordes de cráter (el 80 m suaviza los obstáculos "
+            "próximos y sobreestima la luz).")
+
+
+def no_dem_label(lat_deg: Optional[float]) -> str:
+    """Rótulo de un sitio sin recorte de 5 m según su latitud: al sur de 80°S el motor usa el DEM de 80 m; si no, esfera lisa."""
+    from lsi.pipeline import FAR_FIELD_LAT_MAX
+    return "relieve aproximado (80 m)" if lat_deg is not None and lat_deg <= FAR_FIELD_LAT_MAX else "sin DEM: esfera lisa"
+
+
+def partial_score_help(mode) -> str:
+    """Ayuda de la insignia «sin datos de terreno»: con 80 m, el texto del motivo del modo (``pipeline.FAR_FIELD_SCORE_TEXT``)."""
+    from lsi.pipeline import FAR_FIELD_SCORE_TEXT
+    return FAR_FIELD_SCORE_TEXT if mode is HorizonMode.FAR_FIELD else STANDARD_WARNINGS_ES[WarningCode.NO_TERRAIN_DATA_SCORE]
+
+
+def terrain_kind(mode) -> str:
+    """«dem» (relieve fino, 5 m), «far» (relieve aproximado de 80 m, ``FAR_FIELD``) o «sphere» (sin relieve: solo fuera del polo)."""
+    return {HorizonMode.DEM: "dem", HorizonMode.FAR_FIELD: "far"}.get(mode, "sphere")
+
+
 def score_status_badge(status: GateStatus, partial: bool = False) -> None:
-    """Estado del score; en modo esfera lisa añade la insignia «Parcial: sin datos de terreno»."""
+    """Estado del score; con score parcial añade la insignia «Parcial: sin datos de terreno»."""
     color, icon, text = _STATUS[GateStatus(status)]
     st.badge(text, icon=icon, color=color)
     if partial:
@@ -278,7 +305,7 @@ def verdict_badge(sc) -> None:
     color, icon, _ = VERDICT[sc.verdict]
     st.badge(verdict_label(sc), icon=icon, color=color,
              help="Lo deciden las puertas y los escenarios de incertidumbre, no la nota. " + (
-                 "Provisional: sin terreno es una cota optimista sobre esfera lisa." if sc.verdict_provisional else ""))
+                 "Provisional: sin terreno fino el cálculo es una cota optimista." if sc.verdict_provisional else ""))
 
 
 _VERDICT_CHIP = {"APTO": ("ok", "✔"), "CONDICIONAL": ("cond", "◐"), "NO APTO": ("bad", "✖"), "SIN DATOS": ("nodata", "?")}
@@ -295,7 +322,7 @@ def verdict_sentence(sc) -> str:
     fails = [g for g in sc.gates if g.hard and g.status is GateStatus.FAIL]
     if sc.verdict == "NO APTO":
         why = " y ".join(gate_why(g) for g in fails) or "falla una comprobación mínima"
-        return (f"No apto: {why}." + (" Es provisional: sin mapa de terreno el cálculo es una cota optimista, "
+        return (f"No apto: {why}." + (" Es provisional: sin terreno fino el cálculo es una cota optimista, "
                                       "así que el relieve rara vez lo arreglaría." if sc.verdict_provisional else ""))
     if sc.verdict == "SIN DATOS":
         if short_period(sc):
@@ -559,6 +586,9 @@ def result_header(result: AnalysisResult) -> None:
         res = result.dem_confidence.effective_resolution_m if result.dem_confidence else None
         cols[0].badge(f"Modo DEM ({o.dem_key})", icon=":material/terrain:", color="green", help=term_help("DEM"))
         cols[1].caption(f"Resolución efectiva ≈ {fmt_num(res, 0, 'm')}" if res else "Resolución efectiva del DEM peor que la nominal")
+    elif o.mode is HorizonMode.FAR_FIELD:
+        cols[0].badge(FAR_LABEL, icon=":material/terrain:", color="orange", help=far_field_note())
+        cols[1].caption("Horizonte con el DEM polar de 80 m: aproximado")
     else:
         cols[0].badge("Modo esfera lisa: sin datos de terreno", icon=":material/public:", color="orange", help=term_help("Esfera lisa"))
         cols[1].caption("Sin relieve: solo la curvatura lunar")

@@ -34,7 +34,7 @@ from ui import cache, components as C, state as S
 MAX_SITES = 5
 WEIGHT_KEYS = ("sun", "night", "earth", "terrain")
 WEIGHT_LABELS = {"sun": "Sol", "night": "Noche (oscuridad máxima)", "earth": "Tierra / enlace", "terrain": "Terreno (pendiente)"}
-_HANDLED = {WarningCode.NO_DEM_SMOOTH_SPHERE, WarningCode.NO_TERRAIN_DATA_SCORE, WarningCode.CURATED_COORDS_OUTSIDE_DEM}
+_HANDLED = {WarningCode.NO_DEM_SMOOTH_SPHERE, WarningCode.FAR_FIELD_80M, WarningCode.NO_TERRAIN_DATA_SCORE, WarningCode.CURATED_COORDS_OUTSIDE_DEM}
 _CUSTOM_RE = re.compile(r"^@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$")
 
 
@@ -46,6 +46,13 @@ class Entry:
     site_id: Optional[str]
     lat: float
     lon: float
+    start: Optional[str] = None    # candidato: su mejor fecha de inicio (UTC)
+    days: Optional[float] = None   # candidato: duración de la ventana (d)
+    candidate: bool = False
+
+
+CAND = "candidato"
+POINT_MODES = {"cand": "Mejor candidato de cada sitio (mapa de idoneidad)", "default": "Punto por defecto de cada sitio"}
 
 
 def custom_token(lat: float, lon: float) -> str:
@@ -75,7 +82,7 @@ def _option_label(ctx) -> Callable[[str], str]:
     def f(t: str) -> str:
         if t in by_id:
             s = by_id[t]
-            return f"{s.name} — {'con relieve real (DEM)' if s.has_dem else 'sin DEM: esfera lisa'}"
+            return f"{s.name} — {'con relieve real (DEM)' if s.has_dem else C.no_dem_label(s.lat_deg)}"
         m = _CUSTOM_RE.match(t)
         return f"Punto propio {C.fmt_num(float(m[1]), 3)}°, {C.fmt_num(float(m[2]), 3)}°E" if m else t
     return f
@@ -157,6 +164,29 @@ def is_dem(res: AnalysisResult) -> bool:
     return res.observer.mode is HorizonMode.DEM
 
 
+def mode_label(res: AnalysisResult) -> str:
+    return {"dem": "DEM (relieve real)", "far": f"{C.FAR_LABEL}: terreno fino sin datos",
+            "sphere": "Esfera lisa: sin datos de terreno"}[C.terrain_kind(res.observer.mode)]
+
+
+def with_candidates(ctx, entries: Sequence[Entry], pid: str, days: Optional[float]) -> tuple[list[Entry], list[str]]:
+    """Cada sitio curado con DEM pasa a su MEJOR CANDIDATO (TOP-1 del mapa de idoneidad del perfil y la duración, con su mejor fecha
+    de inicio). Los puntos propios y los sitios sin mapa precalculado se quedan como están; los segundos se devuelven en ``missing``."""
+    by_id = {s.id: s for s in ctx.sites}
+    out, missing = [], []
+    for e in entries:
+        s = by_id.get(e.site_id) if e.site_id else None
+        c = S.best_candidate(ctx, getattr(s, "dem_prefix", None), pid, days) if s is not None and s.has_dem else None
+        if c is not None:
+            out.append(dataclasses.replace(e, lat=c["lat"], lon=c["lon"], start=c["start_utc"], days=c["days"], candidate=True,
+                                           label=f"{e.label} ({CAND})"))
+        else:
+            out.append(e)
+            if s is not None and s.has_dem:
+                missing.append(e.label)
+    return out, missing
+
+
 def _nan(x) -> float:
     return float("nan") if x is None else float(x)
 
@@ -218,7 +248,7 @@ def group_frame(group: str, results: Mapping[str, AnalysisResult], pool: Sequenc
     for n, r in results.items():
         row: dict = {"Sitio": n}
         if group == "Terreno":
-            row["Modo"] = "DEM (relieve real)" if is_dem(r) else "Esfera lisa: sin datos de terreno"
+            row["Modo"] = mode_label(r)
         if group == "Confianza":
             row["Confianza global"] = f"{r.score.confidence.level.value}" if r.score and r.score.confidence else "—"
             row["Confianza del DEM"] = r.dem_confidence.level.value if r.dem_confidence else "sin DEM"
@@ -253,12 +283,17 @@ def _site_warnings(ctx, entries: Sequence[Entry], base: Mapping[str, AnalysisRes
     dem_names = [n for n, r in base.items() if is_dem(r)]
     sphere = [n for n, r in base.items() if not is_dem(r)]
     for n in sphere:
-        st.warning(f"**{n}: sin datos de terreno.** Se calcula sobre esfera lisa (sin relieve): su score es parcial y optimista "
-                   f"y **no es comparable** con los sitios con DEM, por eso queda fuera de las clasificaciones.",
-                   icon=":material/public:")
+        if base[n].observer.mode is HorizonMode.FAR_FIELD:
+            st.warning(f"**{n}: {C.FAR_LABEL}.** Fuera de los recortes de 5 m el horizonte sale del DEM de 80 m: su score es parcial (sin pendiente "
+                       f"de aterrizaje) y optimista, y **no es comparable** con los sitios con DEM de 5 m, por eso queda fuera de las "
+                       f"clasificaciones. " + C.far_field_note(), icon=":material/terrain:")
+        else:
+            st.warning(f"**{n}: sin datos de terreno.** Se calcula sobre esfera lisa (sin relieve): su score es parcial y optimista "
+                       f"y **no es comparable** con los sitios con DEM, por eso queda fuera de las clasificaciones.",
+                       icon=":material/public:")
     if sphere and dem_names:
-        st.caption("Hay sitios con y sin DEM en la misma comparación: las métricas se muestran todas, pero los resaltados "
-                   "«mejor» solo se calculan entre los que tienen relieve real.")
+        st.caption("Hay sitios con y sin DEM de 5 m en la misma comparación: las métricas se muestran todas, pero los resaltados "
+                   "«mejor» solo se calculan entre los que tienen relieve fino.")
     seen = set()
     for n, r in base.items():
         o = r.observer
@@ -325,7 +360,7 @@ def recommendation(base: Mapping[str, AnalysisResult], pool: Sequence[str], prof
     """Párrafos en lenguaje llano: cuál es el mejor candidato y por qué, siempre con la salvedad."""
     cands = [n for n in pool if base[n].score is not None]
     if not cands:
-        return ["No hay ningún sitio con relieve real para comparar, así que no puedo proponer ningún candidato."]
+        return ["No hay ningún sitio con relieve fino (DEM de 5 m) para comparar, así que no puedo proponer ningún candidato."]
     top = max(cands, key=lambda n: (_VERDICT_RANK[base[n].score.verdict], base[n].score.score))
     r, sc = base[top], base[top].score
     others = [n for n in cands if n != top]
@@ -338,19 +373,20 @@ def recommendation(base: Mapping[str, AnalysisResult], pool: Sequence[str], prof
     out.append(C.best_date_sentence(sc))
     why = []
     if others:
-        def cmp(label, g, higher, fmt):
+        def cmp(label, g, higher, fmt, suffix=""):
             vals = {n: g(base[n]) for n in cands}
             if all(v is not None and math.isfinite(v) for v in vals.values()) and top in best_names(vals, higher, cands):
                 rest = " y ".join(fmt(vals[n]) for n in others)
-                why.append(f"{label}: {fmt(vals[top])} (los demás: {rest})")
-        cmp("Sol", lambda x: x.metrics.solar_fraction, True, lambda v: f"{C.fmt_num(100 * v, 0)} % del tiempo")
+                why.append(f"{label}: {fmt(vals[top])}{suffix} (los demás: {rest})")    # el sufijo («del tiempo») sale UNA vez
+        pct = lambda v: f"{C.fmt_num(100 * v, 0)} %"      # noqa: E731
+        cmp("Sol", lambda x: x.metrics.solar_fraction, True, pct, " del tiempo")
         cmp("Noche más larga", lambda x: x.metrics.max_darkness_s, False, lambda v: f"{C.fmt_num(v / 3600, 0)} h")
         if all(base[n].metrics.link_fraction is not None for n in cands):
-            cmp("Enlace posible con la Tierra", lambda x: x.metrics.link_fraction, True, lambda v: f"{C.fmt_num(100 * v, 0)} % del tiempo")
+            cmp("Enlace posible con la Tierra", lambda x: x.metrics.link_fraction, True, pct, " del tiempo")
             cmp("Hueco máximo sin enlace", lambda x: x.metrics.max_link_gap_s, False, lambda v: f"{C.fmt_num(v / 3600, 0)} h")
         else:
-            cmp("Tierra visible (geometría, sin red)", lambda x: x.metrics.earth_fraction, True, lambda v: f"{C.fmt_num(100 * v, 0)} % del tiempo")
-        cmp("Terreno", lambda x: x.slope.percentile_deg if x.slope else None, False, lambda v: f"pendiente típica {C.fmt_num(v, 0)}°")
+            cmp("Tierra visible (geometría, sin red)", lambda x: x.metrics.earth_fraction, True, pct, " del tiempo")
+        cmp("Terreno", lambda x: x.slope.percentile_deg if x.slope else None, False, lambda v: f"{C.fmt_num(v, 0)}°", " de pendiente típica")
     if why:
         out.append("**Por qué:** " + "; ".join(why[:3]) + ".")
     else:
@@ -449,7 +485,11 @@ def _controls(ctx) -> tuple[list[Entry], list[tuple[str, str, str]], bool, str]:
     with st.expander("Sitios y fechas a comparar", expanded=True):
         st.multiselect(f"Sitios (hasta {MAX_SITES})", options, default=[t for t in ss.get(K.COMPARE_SITES, []) if t in options],
                        key="cmp_pick", format_func=_option_label(ctx), max_selections=MAX_SITES, on_change=_on_pick,
-                       help="Por defecto, los tres con relieve real (DEM). Los de esfera lisa se calculan pero no son comparables con ellos.")
+                       help="Por defecto, los tres con relieve real (DEM). Los que no tienen DEM de 5 m (relieve aproximado de 80 m o esfera lisa) se calculan pero no son comparables con ellos.")
+        st.radio("Qué punto se compara de cada sitio", list(POINT_MODES), format_func=POINT_MODES.get, key="cmp_points", horizontal=True,
+                 help="El punto por defecto de un sitio curado puede ser un marcador (pared de cráter, zona en sombra) y dar 0 % de Sol. "
+                      "El candidato es el TOP-1 del mapa de idoneidad del perfil y la duración elegidos, en su mejor fecha de inicio. "
+                      "Los puntos propios que añadas abajo se comparan siempre tal cual.")
         c1, c2, c3 = st.columns([2, 2, 1], vertical_alignment="bottom")
         c1.number_input("Latitud del punto propio (°, sur negativa)", -90.0, 90.0, -85.0, step=0.01, format="%.4f", key="cmp_lat")
         c2.number_input("Longitud (°E, 0–360)", -180.0, 360.0, 0.0, step=0.01, format="%.4f", key="cmp_lon")
@@ -505,10 +545,27 @@ def main() -> None:
                                    snap_prefer="nearest")   # marcador del recorte, como dice el aviso de abajo
     jobs: list[tuple[str, AnalysisRequest]] = []
     auto = S.get_bool(S.MOUNT_AUTO, True)
-    for tag, a, b in periods:
-        for e in entries:
-            # montaje automático: cada sitio según SU latitud (vertical con seguimiento en el polo)
-            mnt = S.auto_mounting(ctx, base_req.panel_id, e.lat) if auto else base_req.mounting
+    if st.session_state.get("cmp_points", "cand") == "cand":
+        entries, missing = with_candidates(ctx, entries, pid, base_req.mission_days)
+        if missing:
+            st.warning(f"**Sin mapa de idoneidad precalculado para {', '.join(missing)}** (perfil «{profiles_from_config(ctx.cfg['score'])[pid].label}», "
+                       "esa duración): se compara su punto por defecto, que puede ser un marcador y no un buen lugar.", icon=":material/warning:")
+        if any(e.candidate for e in entries):
+            st.caption(":material/pin_drop: Cada sitio se evalúa en su **candidato**: el TOP-1 del mapa de idoneidad, en su mejor fecha de inicio "
+                       "(no en el periodo de la barra lateral). Un candidato no es una certificación.")
+    shift = (S.parse_utc(periods[1][1]) - S.parse_utc(periods[0][1])) if len(periods) > 1 else None   # 2.ª fecha: mismo desfase
+    for e in entries:
+        # montaje automático: cada sitio según SU latitud (vertical con seguimiento en el polo)
+        mnt = S.auto_mounting(ctx, base_req.panel_id, e.lat) if auto else base_req.mounting
+        per = periods
+        if e.candidate:
+            s0 = S.parse_utc(e.start)
+            span = timedelta(days=e.days, hours=1)    # +1 h: UTC→ET deja el periodo en 13,999999999 d y el motor lo daría por «más corto que la misión»
+            per = [(f"{s0:%Y-%m-%d}" if shift else "", S.fmt_utc(s0), S.fmt_utc(s0 + span))]
+            if shift:
+                s1 = s0 + shift
+                per.append((f"{s1:%Y-%m-%d}", S.fmt_utc(s1), S.fmt_utc(s1 + span)))
+        for tag, a, b in per:
             jobs.append((f"{e.label} · {tag}" if tag else e.label,
                          dataclasses.replace(base_req, lat_deg=e.lat, lon_deg_e=e.lon, site_id=e.site_id, start_utc=a, end_utc=b,
                                              mounting=mnt or base_req.mounting)))

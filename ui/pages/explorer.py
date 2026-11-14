@@ -278,7 +278,8 @@ def _fig_globe(ctx, obs):
                              textposition="bottom center", textfont=dict(color=theme.TEXT),
                              marker=dict(size=14, symbol="diamond", color=theme.SUN, line=dict(color="#000", width=1.5)),
                              name="Punto de observación"))
-    fig.add_annotation(text="Sin datos de terreno: esfera lisa", xref="paper", yref="paper", x=0.5, y=0.97, showarrow=False,
+    fig.add_annotation(text="Sin recorte de 5 m: solo relieve aproximado (80 m)" if obs.mode is HorizonMode.FAR_FIELD
+                       else "Sin datos de terreno: esfera lisa", xref="paper", yref="paper", x=0.5, y=0.97, showarrow=False,
                        font=dict(color=theme.WARN, size=14), bgcolor=theme.PANEL)
     fig.update_xaxes(title="Longitud (°E)", range=[0, 360], dtick=30)
     fig.update_yaxes(title="Latitud (°)", range=[-90, 90], dtick=30)
@@ -350,12 +351,19 @@ def main() -> None:
 
     if obs.mode is not HorizonMode.DEM:
         forced = S.get_bool(K.FORCE_SPHERE)
-        st.warning("**Sin datos de terreno.** " + ("Has forzado el modo esfera lisa." if forced else
-                   "Este punto no cae en ninguno de los recortes de DEM disponibles.") +
-                   " No se dibuja relieve: solo la curvatura lunar. La iluminación real puede ser muy distinta.",
-                   icon=":material/terrain:")
+        far = obs.mode is HorizonMode.FAR_FIELD
+        if far:
+            st.warning(f"**{C.FAR_LABEL}: no hay recorte de 5 m en este punto.** El 3D del terreno necesita ese recorte, así que aquí "
+                       "se muestra el mapa global plano. El horizonte, el Sol y la Tierra sí se calculan con el DEM polar de 80 m. "
+                       + C.far_field_note(), icon=":material/terrain:")
+        else:
+            st.warning("**Sin datos de terreno.** " + ("Has forzado el modo esfera lisa." if forced else
+                       "Este punto no cae en ninguno de los recortes de DEM disponibles.") +
+                       " No se dibuja relieve: solo la curvatura lunar. La iluminación real puede ser muy distinta.",
+                       icon=":material/terrain:")
         C.accessible_chart(_fig_globe(ctx, obs), f"Mapa global plano de la Luna con el punto de observación en {C.fmt_num(obs.lat_deg, 2)}° de "
-                           f"latitud y {C.fmt_num(obs.lon_deg_e, 2)}° E, sin relieve porque no hay DEM en ese punto.", key="_x_globe",
+                           f"latitud y {C.fmt_num(obs.lon_deg_e, 2)}° E, " + ("sin recorte de 5 m en ese punto (solo relieve aproximado de 80 m)." if far else
+                           "sin relieve porque no hay DEM en ese punto."), key="_x_globe",
                            details=[f"{s.name}: {C.fmt_num(s.lat_deg, 2)}°, {C.fmt_num(s.lon_deg_e % 360, 2)}°E" for s in ctx.sites
                                     if s.lat_deg is not None and s.lon_deg_e is not None])
         _point_panel(obs)

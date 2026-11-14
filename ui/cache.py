@@ -164,7 +164,7 @@ def get_margin_sensitivity(req: AnalysisRequest, margins: Sequence[float]) -> di
 
 @st.cache_data(max_entries=8, ttl=TTL_S, show_spinner=False)
 def get_mini_window(dem_key: str, cx: float, cy: float, radius_m: float = 3000.0, max_px: int = 110):
-    """Recorte pequeño del DEM alrededor del punto (promedio por bloques a ≤ ``max_px``²) para el mini-mapa topográfico; None sin DEM.
+    """Recorte pequeño del DEM alrededor del punto (desplazado hacia dentro si el borde del recorte lo cortaría; promedio por bloques a ≤ ``max_px``²) para el mini-mapa topográfico; None sin DEM.
     Misma técnica que el Explorador (``terrain3d.downsample``); la UI no calcula física, solo recorta para dibujar."""
     from lsi.contracts import DemLayer, DemNotFoundError, DemWindow
     from lsi.data import loader
@@ -172,6 +172,10 @@ def get_mini_window(dem_key: str, cx: float, cy: float, radius_m: float = 3000.0
     ref = get_context().dem_refs.get(dem_key)
     if ref is None:
         return None
+    xmin, ymin, xmax, ymax = ref.bounds_xy_m
+    radius_m = min(radius_m, (xmax - xmin) / 2.0, (ymax - ymin) / 2.0)
+    cx = min(max(cx, xmin + radius_m), xmax - radius_m)    # si el recorte no cubre la miniatura centrada en el punto, se desplaza
+    cy = min(max(cy, ymin + radius_m), ymax - radius_m)    # hacia dentro: el punto sigue marcado, pero el mapa no queda medio vacío
     try:
         w = loader.read_window(ref, DemLayer.SURF, (cx - radius_m, cy - radius_m, cx + radius_m, cy + radius_m))
     except DemNotFoundError:

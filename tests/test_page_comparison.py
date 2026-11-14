@@ -33,9 +33,13 @@ def run(tmp_path, monkeypatch):
     shutil.copy(PAGE, tmp_path / "comparison.py")        # carpeta con solo esta página: es la de inicio
     monkeypatch.setenv("LSI_PAGES_DIR", str(tmp_path))
 
-    def go(mode: str = "publico") -> AppTest:
+    def go(mode: str = "publico", points: str = "default", sites=None) -> AppTest:
+        """``points``: «default» (puntos por defecto de cada sitio: las pruebas antiguas) o «cand» (el defecto de la página)."""
         at = legacy(AppTest.from_file(str(ROOT / "app.py"), default_timeout=180))
         at.session_state[K.LANG_MODE] = mode
+        at.session_state["cmp_points"] = points
+        if sites:
+            at.session_state[K.COMPARE_SITES] = at.session_state["cmp_pick"] = sites
         return at.run()
     return go
 
@@ -269,3 +273,57 @@ def test_link_columns_separate_from_geometric_earth(run):
     t = table_with(at, "ENLACE POSIBLE (%)")
     assert "Tierra visible, geometría (%)" in t.columns and "Hueco máximo sin enlace (h)" in t.columns
     assert (t["ENLACE POSIBLE (%)"] <= t["Tierra visible, geometría (%)"] + 1e-6).all()      # el enlace es un subconjunto de la Tierra visible
+
+
+# --------------------------------------------------------------------------------------- candidatos por defecto
+def test_default_compares_candidates_not_markers(run):
+    """Sin elegir nada, cada sitio con DEM se evalúa en su mejor candidato: Sol > 0 y la misma cifra que run_analysis en esa fecha."""
+    from lsi import pipeline
+    from ui import cache
+    at = run("planificador", points="cand")
+    assert not at.exception
+    sites = sites_of(at)
+    assert sites == ["Site04 (candidato)", "Site11 (candidato)", "Site23 (candidato)"]
+    solar = table_with(at, "Fracción con Sol (%)")
+    assert (solar["Fracción con Sol (%)"] > 0).all()
+    assert any("candidato" in c.value for c in at.caption)
+    assert not any("dentro del cráter Shackleton" in w.value for w in at.warning)     # ya no es el marcador de pared
+    # coherencia con el motor: el veredicto de la tabla es el de run_analysis en el punto y la fecha del candidato
+    ctx = cache.get_context()
+    s11 = next(s for s in ctx.sites if s.id == "site11")
+    from ui import state as S
+    cand = S.best_candidate(ctx, s11.dem_prefix, "lander_solar_no_rhu", None)
+    assert cand is not None and cand["score"] > 2
+    ver = table_with(at, "Veredicto").set_index("Sitio")["Veredicto"]
+    assert len(ver) == 3 and "SIN DATOS" not in set(ver)           # periodo = ventana de misión + margen: nunca «más corto que la misión»
+    from datetime import datetime, timedelta
+    from lsi.contracts import AnalysisRequest
+    c = S.best_candidate(ctx, s11.dem_prefix, "lander_solar_no_rhu", None)
+    st0 = datetime.fromisoformat(c["start_utc"])
+    res = pipeline.run_analysis(ctx, AnalysisRequest(lat_deg=c["lat"], lon_deg_e=c["lon"], site_id="site11", start_utc=S.fmt_utc(st0),
+                                                     end_utc=S.fmt_utc(st0 + timedelta(days=c["days"], hours=1)),
+                                                     score_profile_id="lander_solar_no_rhu"))
+    assert res.metrics.solar_fraction > 0 and ver["Site11 (candidato)"] == res.score.verdict
+
+
+def test_far_field_point_is_not_called_sphere(run):
+    """Un punto personalizado polar fuera de los recortes: «relieve aproximado (80 m)», nunca «esfera lisa»."""
+    at = run("planificador", points="default", sites=["site23", "@-88.0000,40.0000"])
+    assert not at.exception
+    texto = " ".join([w.value for w in at.warning] + [m.value for m in at.markdown] + [str(df.value.to_dict("list")) for df in at.dataframe])
+    assert "Relieve aproximado (80 m)" in texto or "relieve aproximado (80 m)" in texto
+    assert "esfera lisa" not in texto.lower()
+
+
+def test_recommendation_states_unit_once(page_mod, monkeypatch):
+    """«Sol: 79 % del tiempo (los demás: 0 % y 0 %)»: la unidad una sola vez."""
+    from types import SimpleNamespace as NS
+    monkeypatch.setattr(page_mod.C, "best_date_sentence", lambda sc: "fecha")
+    monkeypatch.setattr(page_mod.C, "verdict_sentence", lambda sc: "frase")
+
+    def res(f):
+        sc = NS(verdict="NO APTO", score=f * 100)
+        return NS(score=sc, metrics=NS(solar_fraction=f, max_darkness_s=3600.0, link_fraction=None, earth_fraction=f, max_link_gap_s=0),
+                  slope=None)
+    txt = " ".join(page_mod.recommendation({"A": res(0.79), "B": res(0.0), "C": res(0.0)}, ["A", "B", "C"], "x"))
+    assert "Sol: 79 % del tiempo (los demás: 0 % y 0 %)" in txt
