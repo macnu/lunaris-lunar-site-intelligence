@@ -260,11 +260,11 @@ ASHRAE_B0 = 0.05               # [sup] b0 típico de vidrio de módulo FV (De So
 # LCROSS, URL https://pubs.usgs.gov/publication/70036393). 200 K: tope de las temperaturas máximas de superficie polar iluminada (Fisher et
 # al. 2017, Icarus, rupturas de reflectancia a ~110/150/200 K de temperatura máxima Diviner, https://ntrs.nasa.gov/citations/20170003782).
 # El IR del regolito ILUMINADO a Sol rasante no se ha encontrado en fuente primaria: el nominal (100 K) sigue «a verificar».
-T_AMBIENT_RANGE_K = (40.0, 200.0)
+T_AMBIENT_RANGE_K = (40.0, 250.0)
 BAND_RULE = ("Envolvente conjunta (mín/máx) sobre el producto cartesiano {parámetros estimados} × {variantes de IAM} × {T_amb}: cada "
              "fuente se varía UNA vez dentro de la misma envolvente (no se suman anchos ni se combinan en cuadratura: sin doble conteo). "
              "Variantes de IAM: el modelo del panel, solo-coseno (cota superior), Fresnel con n=1,40 y 1,60 [sup] y ASHRAE b0=0,05 "
-             "[a verificar]. T_amb en [40, 200] K [sup]; el nominal de 100 K sigue «a verificar».")
+             "[a verificar]. T_amb en [40, 250] K [sup]; el nominal de 130 K sigue «a verificar».")
 
 
 def power_band(series: PowerSeries, panel: PanelSpec, params: PowerParams, catalog: PanelCatalog, *,

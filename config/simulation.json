@@ -80,7 +80,7 @@
   "power": {
     "solar_constant_w_m2": 1361.0,
     "iam": {"model": "fresnel_1_interface", "n_coverglass_default": 1.526, "prefer_panel_n": true},
-    "thermal": {"t_ambient_k": 100.0, "t_min_valid_k": 173.15, "eta_ref_for_balance": 0.30, "t_ambient_range_k": [40.0, 200.0], "t_ambient_note": "[sup] nominal 100 K a verificar (sin fuente primaria del IR del regolito iluminado a Sol rasante); 40 K = trampa fria (Paige et al. 2010, Science 330, 479); 200 K = tope de temperaturas maximas polares iluminadas (Fisher et al. 2017, Icarus)"},
+    "thermal": {"t_ambient_k": 130.0, "t_min_valid_k": 173.15, "eta_ref_for_balance": 0.30, "t_ambient_range_k": [40.0, 250.0], "t_ambient_note": "[sup] nominal 130 K (propuesta de la revisión de paneles; sin fuente primaria del IR del regolito iluminado a Sol rasante, a verificar) (sin fuente primaria del IR del regolito iluminado a Sol rasante); 40 K = trampa fria (Paige et al. 2010, Science 330, 479); 250 K = tope de temperaturas máximas polares iluminadas (Diviner: máximas del suelo 229-240 K en los TOP-1; Fisher et al. 2017, Icarus)"},
     "eta_rel": {"eta_max_fallback": 1.35, "prefer_panel_cold_gain_cap": true},
     "degradation": 0.0,
     "dust_loss": 0.0,
