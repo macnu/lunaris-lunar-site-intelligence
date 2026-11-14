@@ -166,3 +166,45 @@ def test_real_site04_window_if_downloaded():
     assert w["image"].shape == (300, 300) and w["px_m"] == pytest.approx(10.0) and w["coverage"].any()
     assert "NASA" in w["attribution"] and (w["image"][~w["coverage"]] == 0).all()
     assert (w["x0_m"], w["y0_m"]) == pytest.approx((cx - 1500 + 5, cy + 1500 - 5))
+
+
+# ---- fusión del JSON de regiones: regenerar no debe borrar lo añadido a mano ----
+def _fi():
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import fetch_imagery as f
+    return f
+
+
+def test_merge_regions_keeps_manual_coordinates_of_2024_only_regions():
+    f = _fi()
+    old = {"regions": [dict(id="slater_plain", nombre="Slater Plain", centro_lat_deg=-84.1, centro_lon_deg_e=30.2,
+                            fuente="figura oficial de NASA (NTRS 20250011660)", confianza="aprox")]}
+    new = {"regions": [dict(id="slater_plain", nombre="Slater Plain", centro_lat_deg=None, centro_lon_deg_e=None,
+                            fuente="sin coordenadas", confianza="sin coordenadas verificadas")]}
+    row = f.merge_regions_doc(new, old)["regions"][0]
+    assert row["centro_lat_deg"] == -84.1 and row["confianza"] == "aprox" and "NTRS" in row["fuente"]
+
+
+def test_merge_regions_generated_wins_on_its_keys_and_extra_keys_survive():
+    f = _fi()
+    old = {"regions": [dict(id="a", centro_lat_deg=-85.0, centro_lon_deg_e=1.0, medida_figura_nasa=dict(lat=-85.2))]}
+    new = {"regions": [dict(id="a", centro_lat_deg=-85.5, centro_lon_deg_e=2.0)]}
+    row = f.merge_regions_doc(new, old)["regions"][0]
+    assert row["centro_lat_deg"] == -85.5 and row["centro_lon_deg_e"] == 2.0       # lo generado manda
+    assert row["medida_figura_nasa"] == dict(lat=-85.2)                           # la clave extra sobrevive
+
+
+def test_merge_regions_keeps_old_only_regions_unions_sources_and_respects_note():
+    f = _fi()
+    old = {"_nota": "nota existente", "fuentes": ["u1", "u2"], "regions": [dict(id="solo_old", centro_lat_deg=-86.0)]}
+    new = {"_nota": "nota nueva", "fuentes": ["u2", "u3"], "regions": [dict(id="b", centro_lat_deg=-87.0)]}
+    doc = f.merge_regions_doc(new, old)
+    assert {r["id"] for r in doc["regions"]} == {"b", "solo_old"}
+    assert doc["fuentes"] == ["u2", "u3", "u1"] and doc["_nota"] == "nota existente"
+
+
+def test_merge_regions_is_idempotent_on_the_real_file():
+    f = _fi()
+    import json
+    cur = json.loads((ROOT / "config" / "artemis_regions.json").read_text(encoding="utf-8"))
+    assert f.merge_regions_doc(cur, cur)["regions"] == cur["regions"]

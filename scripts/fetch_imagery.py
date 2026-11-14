@@ -125,9 +125,38 @@ def build_regions() -> int:
                  "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/",
                  "https://zenodo.org/records/17954508"],
         generado=dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), bytes_leidos=total, regions=rows)
-    (ROOT / "config" / "artemis_regions.json").write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"{len(rows)} regiones escritas; {total} bytes leídos de Zenodo")
+    path = ROOT / "config" / "artemis_regions.json"
+    old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    doc = merge_regions_doc(doc, old)
+    path.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(f"{len(doc['regions'])} regiones escritas; {total} bytes leídos de Zenodo")
     return 0
+
+
+def merge_regions_doc(new: dict, old: dict) -> dict:
+    """Fusiona el JSON regenerado con el existente SIN perder lo añadido a mano.
+
+    - Región sin coordenadas en lo generado pero con coordenadas en lo existente (las 4 solo de 2024, rellenadas desde la
+      figura oficial de NASA): se conserva la entrada existente entera, con su fuente y su confianza.
+    - Región con coordenadas generadas: lo generado manda en las claves que produce el script y se conservan las claves
+      extra del fichero existente (p. ej. la medida sobre la figura de NASA).
+    - Regiones solo presentes en lo existente se conservan; la lista de fuentes se une; la nota existente se respeta.
+    """
+    old_rows = {r["id"]: r for r in old.get("regions", []) if isinstance(r, dict) and "id" in r}
+    out, seen = [], set()
+    for r in new.get("regions", []):
+        o = old_rows.get(r["id"], {})
+        seen.add(r["id"])
+        if r.get("centro_lat_deg") is None and o.get("centro_lat_deg") is not None:
+            out.append(o)
+        else:
+            out.append({**o, **r})
+    out += [o for i, o in old_rows.items() if i not in seen]
+    fuentes = list(dict.fromkeys([*new.get("fuentes", []), *old.get("fuentes", [])]))
+    merged = {**old, **new, "regions": out, "fuentes": fuentes}
+    if old.get("_nota"):
+        merged["_nota"] = old["_nota"]
+    return merged
 
 
 def _iou(a, b) -> float:
