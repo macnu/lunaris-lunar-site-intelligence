@@ -7,6 +7,10 @@ Dos capas:
   three.js r147 y OrbitControls vendorizados (``ui/static/vendor``, ver su MANIFEST.json), CSS y JS en línea: cero peticiones de red.
 * ``render_terrain_viewer``: pinta ese HTML con Streamlit.
 
+Además (``lsi.data.viewer_context``): un TERRENO DE CONTEXTO (DEM LOLA de 80 m, ±20-25 km, ≤ 160 × 160 vértices, sin foto, con sus propias
+sombras y degradado a negro en el borde) y un PARCHE FINO de ≈ 700 m alrededor del observador (alturas nativas de 5 m interpoladas a 2,5 m).
+El microrrelieve de ese parche es solo sombreado procedural en el shader, rotulado «no es dato».
+
 Datos que viajan (todo en un JSON dentro de ``<script type="application/json">``, con ``<`` escapado):
 alturas uint16 cuantizadas entre mín y máx (paso < 0,1 m en recortes de 5 km), UN PNG RGB de textura (R = foto con los huecos rellenos
 por el vecino más cercano para que no haya halos, G = máscara de foto 0/255, B = iluminación calculada 0 sombra … 255 Sol), nombres
@@ -26,6 +30,8 @@ from typing import Optional, Sequence
 import numpy as np
 from PIL import Image
 from scipy import ndimage as ndi
+
+from lsi.data import viewer_context as VC
 
 STATIC = Path(__file__).resolve().parent / "static"
 MAX_SIDE = 512                  # vértices por lado: 262 144 vértices, ≈ 520 000 triángulos; WebGL medio los mueve (hay reintento con menos)
@@ -72,17 +78,25 @@ def _fmt(x: float, d: int = 1) -> str:
     return f"{x:.{d}f}".replace(".", ",")
 
 
-def photo_notice(source: str, native_px_m: float, shown_px_m: float, nophoto_pct: float) -> tuple[str, str]:
-    """(aviso corto siempre visible, detalle de límites) de la foto: fuente y resolución REAL. ``source``: 'sdem' | 'nac' | 'mixed' | 'none'."""
+PSR_TEXT = "Sin foto: región permanentemente sombreada; la cámara LROC NAC no puede verla; ShadowCam no está integrada."
+
+
+def photo_notice(source: str, native_px_m: float, shown_px_m: float, nophoto_pct: float, psr_pct: Optional[float] = None) -> tuple[str, str]:
+    """(aviso corto siempre visible, detalle de límites) de la foto: fuente y resolución REAL. ``source``: 'sdem' | 'nac' | 'mixed' | 'none'.
+    ``psr_pct``: % de las celdas sin foto que caen en una región permanentemente sombreada (``data.psr``); ≥ 50 % lo explica."""
+    in_psr = psr_pct is not None and psr_pct >= 50.0 and nophoto_pct >= 3.0
     if source == "none":
-        return ("Sin foto en este recorte: relieve sombreado gris (no se inventa textura). "
-                "La luz, las sombras y el relieve sí son los calculados para este instante.",
+        return (("Sin foto en este recorte: relieve sombreado gris (no se inventa textura). " + (PSR_TEXT + " " if in_psr else "") +
+                 "La luz, las sombras y el relieve sí son los calculados para este instante."),
                 "No hay ortomosaico LROC válido en esta zona (sombra permanente o fuera de la cobertura).")
     shown = f"{_fmt(shown_px_m, 0)} m/px en pantalla"
     short = (f"Foto: LROC NAC, NASA/GSFC/ASU, ≈{_fmt(native_px_m, 0)} m/px de origen ({shown}), promedio de pasadas: no es la luz de esta fecha."
-             + (f" {_fmt(nophoto_pct, 0)} % del recorte sin foto." if nophoto_pct >= 1 else ""))
+             + (f" {_fmt(nophoto_pct, 0)} % del recorte sin foto." if nophoto_pct >= 1 else "")
+             + (" " + PSR_TEXT if in_psr else ""))
     det = ["La foto es un promedio de pasadas con Sol distinto: sus sombras no son las de esta fecha (las del visor sí).",
            "Zonas sin foto: gris con granulosidad, sin textura inventada."]
+    if in_psr:
+        det.append(f"El {_fmt(psr_pct, 0)} % de la zona sin foto está dentro de una PSR de Mazarico et al. 2011 (LROC/ASU).")
     if source in ("sdem", "mixed"):
         det.append("Ortomosaico SDEM (Bertone et al. 2025, 5 m/px): su retícula está desplazada ≈ 2,5 m respecto al relieve.")
     if source in ("nac", "mixed"):
@@ -91,7 +105,7 @@ def photo_notice(source: str, native_px_m: float, shown_px_m: float, nophoto_pct
 
 
 def describe_scene(label: str, ext_km: float, z_min: float, z_max: float, sun: dict, earth: dict, hz_sun: float, hz_earth: float,
-                   lit_pct: float, when_utc: str, photo_short: str, n_names: int) -> str:
+                   lit_pct: float, when_utc: str, photo_short: str, n_names: int, has_ctx: bool = False, has_patch: bool = False) -> str:
     """Descripción textual de la escena (modo lectura y lector de pantalla)."""
     def state(el, hz):
         return "bajo el horizonte local" if el < 0 else (f"tapado por el horizonte calculado, que ahí está a {_fmt(hz, 1)}°" if el <= hz else "visible sobre el horizonte")
@@ -101,7 +115,9 @@ def describe_scene(label: str, ext_km: float, z_min: float, z_max: float, sun: d
             f"Un {_fmt(lit_pct, 0)} % del recorte recibe luz directa; el resto está en sombra calculada del relieve. "
             f"Cielo negro con estrellas. Un marcador luminoso con haz vertical señala al observador"
             + (f" y {n_names} nombres de rasgos del gazetteer flotan sobre sus posiciones" if n_names else "") + ". "
-            f"Vistas: cenital, oblicua y del observador (mirando al acimut elegido). {photo_short} "
+            + ("Alrededor del recorte continúa el terreno lejano (modelo LOLA de 80 m, sin foto, con las mismas sombras y un degradado a negro en el borde). " if has_ctx else "")
+            + ("Junto al observador hay un parche de alta resolución (5 m nativos interpolados a 2,5 m) con un microrrelieve procedural que es solo sombreado y no es dato. " if has_patch else "") +
+            f"Vistas: cenital, oblicua, orbital amplia y del observador (mirando al acimut elegido). {photo_short} "
             "Controles: arrastrar para orbitar, rueda para acercar, botón derecho o Mayús para desplazar, doble clic para reiniciar; "
             "en la vista del observador, flechas izquierda y derecha giran la mirada.")
 
@@ -109,7 +125,8 @@ def describe_scene(label: str, ext_km: float, z_min: float, z_max: float, sun: d
 def build_scene(*, heights: np.ndarray, x0_m: float, y0_m: float, px_m: float, illum: np.ndarray,
                 photo: Optional[np.ndarray], photo_valid: Optional[np.ndarray], photo_source: str, photo_native_px_m: float,
                 obs: dict, sun: dict, earth: dict, horizon_az: Sequence[float], horizon_el: Sequence[float],
-                names: Sequence[tuple], when_utc: str, lit_pct: float, view_az: Optional[float] = None, exag0: float = 1.5) -> dict:
+                names: Sequence[tuple], when_utc: str, lit_pct: float, view_az: Optional[float] = None, exag0: float = 1.5,
+                context: Optional[dict] = None, patch: Optional[dict] = None, psr_pct: Optional[float] = None) -> dict:
     """Escena serializable del visor (determinista: mismas entradas ⇒ mismo JSON).
 
     ``heights`` (ny, nx) m, fila 0 = norte, NaN = sin dato; (``x0_m``, ``y0_m``) centro del píxel [0, 0], ``px_m``.
@@ -117,6 +134,7 @@ def build_scene(*, heights: np.ndarray, x0_m: float, y0_m: float, px_m: float, i
     ``photo`` uint8 y ``photo_valid`` bool de la misma malla (None = sin foto). ``obs``: x, y (plano), lat, lon, h (altura del
     observador), label, north_deg (azimut de rejilla del norte local = atan2(x, y)). ``sun``/``earth``: az_deg, el_deg, radius_deg (+ para el
     Sol grid_az_deg y el_c_deg: dirección en el CENTRO del recorte, la de las sombras). ``names``: (nombre, x, y, tipo, diámetro_km).
+    ``context``/``patch``: salidas de ``viewer_context.context_terrain``/``fine_patch`` (opcionales); ``psr_pct``: ver ``photo_notice``.
     """
     z = np.asarray(heights, float)
     ny, nx = z.shape
@@ -151,7 +169,7 @@ def build_scene(*, heights: np.ndarray, x0_m: float, y0_m: float, px_m: float, i
         nxz = [round(x0_m + c * px_m - obs["x"], 1), round(obs["y"] - (y0_m - r * px_m), 1)]
     shown = max(px_m, photo_native_px_m)
     src = photo_source if pv.any() else "none"
-    short, det = photo_notice(src, photo_native_px_m, shown, nophoto_pct)
+    short, det = photo_notice(src, photo_native_px_m, shown, nophoto_pct, psr_pct)
     haz, hel = _interp_periodic(np.asarray(horizon_az), np.asarray(horizon_el)) if len(horizon_az) else ([], [])
     hzs = float(np.interp(sun["az_deg"] % 360, haz, hel, period=360)) if haz else -90.0
     hze = float(np.interp(earth["az_deg"] % 360, haz, hel, period=360)) if haz else -90.0
@@ -162,7 +180,8 @@ def build_scene(*, heights: np.ndarray, x0_m: float, y0_m: float, px_m: float, i
         "z": {"min": round(zmin, 3), "max": round(zmax, 3), "b64": base64.b64encode(q.astype("<u2").tobytes()).decode("ascii")},
         "tex_png": _png(tex),
         "photo": {"source": src, "native_px_m": float(photo_native_px_m), "shown_px_m": round(float(shown), 2), "nophoto_pct": round(nophoto_pct, 1),
-                  "notice": short, "detail": det, "nophoto_xz": nxz},
+                  "notice": short, "detail": det, "nophoto_xz": nxz,
+                  "psr_pct": None if psr_pct is None else round(float(psr_pct), 1), "photo_pct": round(100.0 - nophoto_pct, 1)},
         "obs": {"x": round(float(obs["x"]), 2), "y": round(float(obs["y"]), 2), "z": round(float(obs.get("z") or zmin), 2), "h": float(obs["h"]),
                 "label": label, "pos_text": f"{_fmt(obs['lat'], 3)}°, {_fmt(obs['lon'], 3)}°E"},
         "north_deg": round(float(obs["north_deg"]), 4),
@@ -173,11 +192,21 @@ def build_scene(*, heights: np.ndarray, x0_m: float, y0_m: float, px_m: float, i
         "when_utc": when_utc, "lit_pct": round(float(lit_pct), 1),
         "view_az": round(float(sun["az_deg"] if view_az is None else view_az), 1), "exag0": float(exag0),
     }
-    scene["description"] = describe_scene(label, max(nx, ny) * px_m / 1000.0, zmin, zmax, sun, earth, hzs, hze, lit_pct, when_utc, short, len(names))
+    scene["description"] = describe_scene(label, max(nx, ny) * px_m / 1000.0, zmin, zmax, sun, earth, hzs, hze, lit_pct, when_utc, short, len(names),
+                                          context is not None, patch is not None)
     n = len(json.dumps(scene, separators=(",", ":")))
     if n > MAX_PAYLOAD_BYTES:
         raise ValueError(f"payload del visor demasiado grande: {n} bytes (máx. {MAX_PAYLOAD_BYTES})")
-    scene["_bytes"] = n
+    extra = 0
+    if context is not None:
+        scene["ctx"] = VC.context_payload(context)
+    if patch is not None:
+        scene["patch"] = VC.patch_payload(patch)
+    if context is not None or patch is not None:
+        extra = len(json.dumps({k: scene[k] for k in ("ctx", "patch") if k in scene}, separators=(",", ":")))
+        if extra > VC.MAX_EXTRA_BYTES:
+            raise ValueError(f"payload del terreno lejano y del parche demasiado grande: {extra} bytes (máx. {VC.MAX_EXTRA_BYTES})")
+    scene["_bytes"], scene["_bytes_crop"], scene["_bytes_extra"] = n + extra, n, extra
     return scene
 
 
@@ -207,16 +236,19 @@ _BODY = """<div id="v" role="region" aria-label="Visor 3D del terreno lunar">
   <label><input type="checkbox" id="l-slope"> Pendiente</label>
   <label><input type="checkbox" id="l-names"> Nombres</label>
   <label><input type="checkbox" id="l-stars"> Estrellas</label>
+  <label><input type="checkbox" id="l-ctx"> Terreno lejano</label>
+  <label title="Sombreado procedural muy sutil sobre el suelo cercano (sin geometría): NO es dato del terreno."><input type="checkbox" id="l-micro"> Microrrelieve</label>
   <label><input type="checkbox" id="l-horizon"> Horizonte lejano</label>
   <label title="La Tierra mide ≈ 1,9° en el cielo: se ve muy pequeña. Esto la agranda 7 veces."><input type="checkbox" id="l-big"> Agrandar la Tierra</label>
   <h4>Vista</h4>
-  <div class="btnrow"><button id="m-top" aria-pressed="false">Cenital</button><button id="m-oblique" aria-pressed="false">Oblicua</button><button id="m-observer" aria-pressed="false">Observador</button></div>
+  <div class="btnrow"><button id="m-top" aria-pressed="false">Cenital</button><button id="m-oblique" aria-pressed="false">Oblicua</button><button id="m-wide" aria-pressed="false" title="Cámara lejana: recorte y terreno lejano">Orbital amplia</button><button id="m-observer" aria-pressed="false">Observador</button></div>
   <div id="obs-ctl" hidden><h4>Mirar al acimut</h4>
    <input type="range" id="az" min="0" max="360" step="1" aria-label="Acimut de la mirada del observador, grados desde el norte hacia el este"><div class="small" id="az-val"></div>
    <div class="btnrow"><button id="az-sun">Al Sol</button><button id="az-earth">A la Tierra</button></div></div>
   <div id="exag-ctl"><h4>Exageración vertical</h4>
    <input type="range" id="exag" min="1" max="8" step="0.5" aria-label="Exageración vertical del relieve"><div class="small" id="exag-val"></div></div>
   <div class="btnrow" style="margin-top:8px"><button id="reset" title="Reiniciar la vista (también doble clic)">Reiniciar</button><button id="read" aria-pressed="false">Leer escena</button></div>
+  <div class="small legend" id="legend"></div>
   <div class="small" style="margin-top:6px" id="mesh-info"></div><div class="small" id="perf-info"></div>
  </details></div>
  <div id="p-info" class="panel" aria-label="Detalles del punto">
@@ -226,7 +258,7 @@ _BODY = """<div id="v" role="region" aria-label="Visor 3D del terreno lunar">
   <div class="row"><span>Iluminado</span><b id="i-lit"></b></div>
   <div class="small" style="margin-top:4px" id="photo-detail"></div>
  </div>
- <div id="hud-top"></div>
+ <div id="hud-top"></div><div id="chip" role="status"></div>
  <div id="desc" class="panel" hidden><b>Descripción de la escena</b><p id="desc-txt" style="margin:4px 0 0"></p></div>
  <div id="hud-bl"><div id="north" aria-label="Flecha del norte"><i id="north-i"></i><span>N</span></div>
   <div id="scale"><div id="scale-bar"></div><span id="scale-txt"></span></div></div>

@@ -12,6 +12,7 @@ del cursor y Sol/Tierra en su acimut/elevación reales. El 3D de Plotly queda co
 from __future__ import annotations
 
 import base64
+import dataclasses
 import re
 from datetime import timedelta
 from pathlib import Path
@@ -29,7 +30,7 @@ from lsi.terrain import shadows
 from lsi.contracts import (
     MOON_RADIUS_KM, DemLayer, DemNotFoundError, DemWindow, HorizonMode, Severity, StateKey as K,
 )
-from lsi.data import catalog, gazetteer, imagery, loader, sdem
+from lsi.data import catalog, gazetteer, imagery, loader, sdem, viewer_context as VC
 from lsi.visualization import terrain3d as T, theme
 from lsi.visualization.relief_map import hillshade, relief_map_figure
 from ui import cache, components as C, state as S, terrain_viewer as TV
@@ -45,6 +46,7 @@ _T = "_x_t"       # slider de fecha y hora de la capa Iluminación
 VIEWER_H = 660    # alto del visor three.js (px)
 CLICK_GRID = 80   # rejilla de puntos invisibles del mapa 2D (ver relief_map; Plotly no deja seleccionar un mapa de calor)
 MAX_LABELS = 12   # nombres de gazetteer rotulados en el mapa 2D (los de mayor diámetro que no se solapen)
+MIN_PHOTO_PCT = 30.0   # por debajo, el marcador por defecto de un sitio se cambia en el visor por su candidato (si éste tiene más foto)
 
 
 # ------------------------------------------------------------------------------------------------ datos cacheados
@@ -158,6 +160,43 @@ def _viewer_illum(dem_key: str, cx: float, cy: float, radius_m: Optional[float],
     return _illum_grid(_viewer_grid(dem_key, cx, cy, radius_m)["win"], lat, lon, az, el)
 
 
+@st.cache_data(max_entries=12, ttl=1800, show_spinner="Calculando el terreno lejano del visor 3D (DEM de 80 m)…")
+def _viewer_context(dem_key: str, cx: float, cy: float, radius_m: Optional[float], lat: float, lon: float, az: float, el: float):
+    """Terreno de contexto LOLA 80 m (±20-25 km) con sus sombras para el Sol dado; None si no está el campo lejano (ver ``viewer_context``)."""
+    win = _viewer_grid(dem_key, cx, cy, radius_m)["win"]
+    ny, nx = win.data.shape
+    cxw, cyw = win.x0_m + (nx - 1) / 2.0 * win.pixel_size_m, win.y0_m - (ny - 1) / 2.0 * win.pixel_size_m
+    half = VC.context_half_m(max(nx, ny) * win.pixel_size_m / 2.0)
+    return VC.context_terrain(Path(cache.get_context().root) / "data" / "raw", (cxw, cyw), half,
+                              dict(heights=win.data, x0_m=win.x0_m, y0_m=win.y0_m, px_m=win.pixel_size_m),
+                              dict(az_deg=az, el_deg=el, lat=lat, lon_deg_e=lon))
+
+
+@st.cache_data(max_entries=8, ttl=1800, show_spinner=False)
+def _fine_patch(dem_key: str, ox: float, oy: float):
+    """Parche de ≈ 700 m alrededor del observador a 2,5 m (bicúbica sobre las alturas NATIVAS de 5 m: SDEM si el sitio lo tiene, si no LDEM)."""
+    half = VC.PATCH_HALF_M + 40.0
+    pack = sdem.terrain_texture_pack(dem_key, ox, oy, half, 400)           # 2·390 m / 5 m = 156 ≤ 400: retícula nativa exacta
+    if pack is not None:
+        z, x0, y0, px = pack["heights"].astype(float), pack["x0_m"], pack["y0_m"], pack["px_m"]
+    else:
+        w = loader.read_window(cache.get_context().dem_refs[dem_key], DemLayer.SURF, (ox - half, oy - half, ox + half, oy + half), margin_px=2)
+        z, x0, y0, px = np.asarray(w.data, float), w.x0_m, w.y0_m, w.pixel_size_m
+    return VC.fine_patch(z, x0, y0, px, (ox, oy))
+
+
+def photo_pct(g: dict) -> float:
+    """% del recorte (celdas con altura) que tiene foto, de ``_viewer_grid``."""
+    ok = np.isfinite(g["win"].data)
+    if g["valid"] is None or not ok.any():
+        return 0.0
+    return 100.0 * float((np.asarray(g["valid"], bool) & ok).sum()) / float(ok.sum())
+
+
+def _crop_center(obs, radius_m: Optional[float]) -> tuple[float, float]:
+    return (0.0, 0.0) if radius_m is None else (round(obs.x_m / 500.0) * 500.0, round(obs.y_m / 500.0) * 500.0)
+
+
 def viewer_scene(obs, res, cur, dem_key: str, cx: float, cy: float, radius_m: Optional[float], labels, exag0: float = 1.5) -> dict:
     """Escena del visor three.js para el instante ``cur`` (UTC): terreno + foto + sombras + Sol y Tierra reales (ver ``ui.terrain_viewer``)."""
     g = _viewer_grid(dem_key, cx, cy, radius_m)
@@ -169,6 +208,11 @@ def viewer_scene(obs, res, cur, dem_key: str, cx: float, cy: float, radius_m: Op
     fin = np.isfinite(frac)
     hz = res.horizon
     h_el = np.where(np.isfinite(hz.h_lb_deg), hz.h_lb_deg, -5.0)
+    az_r, el_r = round(az / 0.05) * 0.05, round(el / 0.05) * 0.05
+    ctx_t = _viewer_context(dem_key, cx, cy, radius_m, round(obs.lat_deg, 4), round(obs.lon_deg_e, 4), az_r, el_r)
+    patch = _fine_patch(dem_key, round(obs.x_m * 2) / 2, round(obs.y_m * 2) / 2)
+    nophoto = fin & ~(np.zeros(frac.shape, bool) if g["valid"] is None else np.asarray(g["valid"], bool))
+    psr_pct = VC.psr_nophoto_pct(win.x0_m, win.y0_m, win.pixel_size_m, win.data.shape, nophoto)
     return TV.build_scene(
         heights=win.data, x0_m=win.x0_m, y0_m=win.y0_m, px_m=win.pixel_size_m, illum=frac, photo=g["photo"], photo_valid=g["valid"],
         photo_source=g["source"], photo_native_px_m=g["native_px_m"],
@@ -176,7 +220,8 @@ def viewer_scene(obs, res, cur, dem_key: str, cx: float, cy: float, radius_m: Op
                  label=obs.label.split(" [")[0], north_deg=_north_deg(obs)),
         sun=dict(az_deg=az, el_deg=el, grid_az_deg=g_az, el_c_deg=el_c, radius_deg=rs),
         earth=dict(az_deg=az_e, el_deg=el_e, radius_deg=re_), horizon_az=np.asarray(hz.az_deg, float), horizon_el=h_el,
-        names=labels, when_utc=f"{cur:%Y-%m-%d %H:%M}", lit_pct=100.0 * float(np.mean(frac[fin])) if fin.any() else 0.0, exag0=exag0)
+        names=labels, when_utc=f"{cur:%Y-%m-%d %H:%M}", lit_pct=100.0 * float(np.mean(frac[fin])) if fin.any() else 0.0, exag0=exag0,
+        context=ctx_t, patch=patch, psr_pct=psr_pct)
 
 
 def lighting_payload(win: DemWindow, lat: float, lon: float, sun_az_deg: float, sun_el_deg: float) -> dict:
@@ -200,6 +245,44 @@ def lighting_payload(win: DemWindow, lat: float, lon: float, sun_az_deg: float, 
             "shadow_pct": float(100.0 * np.mean(frac[fin])) if fin.any() else float("nan")}
 
 
+def _marker_key(site_id: str) -> str:
+    return f"_x_marker_{site_id}"
+
+
+def _toggle_marker(site_id: str) -> None:
+    st.session_state[_marker_key(site_id)] = not st.session_state.get(_marker_key(site_id), False)
+
+
+def candidate_request(ctx, req, obs, radius_m: Optional[float]):
+    """Si el punto activo es el MARCADOR de un sitio curado y su recorte tiene < ``MIN_PHOTO_PCT`` % de foto, busca el CANDIDATO del
+    sitio (``pipeline.snap_candidate`` con ``prefer='best'``, vía ``cache.get_snap``, como la comparativa). Devuelve
+    ``(petición_del_candidato, % foto del marcador, % foto del candidato, puesto)`` o ``None`` si no procede (punto propio, ya hay foto, no hay
+    candidato o el candidato no tiene más foto que el marcador)."""
+    if S.get_str(S.ORIGIN) != "site" or not obs.site_id or obs.mode is not HorizonMode.DEM:
+        return None
+    try:
+        p0 = photo_pct(_viewer_grid(obs.dem_key, *_crop_center(obs, radius_m), radius_m))
+        if p0 >= MIN_PHOTO_PCT:
+            return None
+        cand = cache.get_snap(req.lat_deg, req.lon_deg_e, obs.site_id, "best", req.score_profile_id, req.mission_days)
+        if cand is None or cand.kind != "best":
+            return None
+        pick = None                      # el mejor puesto del TOP del mapa de idoneidad cuyo recorte sí tiene foto
+        for e in sorted(cand.ranking, key=lambda r: r.rank):
+            x, y = (float(v) for v in stereo_forward(e.lat_deg, e.lon_deg_e))
+            if np.hypot(x - obs.x_m, y - obs.y_m) < 150.0:
+                continue
+            p1 = photo_pct(_viewer_grid(cand.dem_key, *_crop_center(dataclasses.replace(obs, x_m=x, y_m=y), radius_m), radius_m))
+            if p1 >= MIN_PHOTO_PCT:
+                pick = (e, p1)
+                break
+    except (DemNotFoundError, KeyError, ValueError):
+        return None
+    if pick is None:
+        return None
+    return dataclasses.replace(req, lat_deg=float(pick[0].lat_deg), lon_deg_e=float(pick[0].lon_deg_e)), p0, pick[1], int(pick[0].rank)
+
+
 def _plain_snap(obs) -> str:
     """Frase llana del ajuste del punto al mapa (sin jerga): «mejor punto dentro del cráter, a 0,12 km del centro»."""
     d = obs.snap_distance_km
@@ -214,6 +297,20 @@ def _plain_snap(obs) -> str:
 
 
 # ------------------------------------------------------------------------------------------------ callbacks
+def _candidate_notice(site_id: str, using_marker: bool, p0: float, p1: float, rank: int) -> None:
+    """Aviso del cambio de punto (o de que se mantiene el marcador) con el botón para alternar."""
+    if using_marker:
+        st.info(f"**Estás viendo el marcador del sitio**, donde solo el {C.fmt_num(p0, 0)} % del recorte tiene foto. "
+                f"Su candidato (puesto {rank} del mapa de idoneidad) tiene un {C.fmt_num(p1, 0)} %.", icon=":material/photo_camera:")
+        st.button("Ver el candidato del sitio", key="_x_cand_btn", on_click=_toggle_marker, args=(site_id,), icon=":material/pin_drop:")
+    else:
+        st.info(f"**Punto cambiado en este visor.** El marcador del sitio cae donde la cámara LROC NAC apenas llega: solo el "
+                f"{C.fmt_num(p0, 0)} % de su recorte tiene foto (el resto es sombra permanente o queda fuera del mosaico). Se muestra el "
+                f"**candidato del sitio** (el mejor puesto del TOP del mapa de idoneidad que sí tiene foto: el nº {rank}), con un {C.fmt_num(p1, 0)} % de foto. Un candidato no es una certificación.",
+                icon=":material/swap_horiz:")
+        st.button("Volver al marcador del sitio", key="_x_cand_btn", on_click=_toggle_marker, args=(site_id,), icon=":material/undo:")
+
+
 def _set_layer() -> None:
     S.set_state(K.LAYER, st.session_state["_x_layer"])
 
@@ -404,10 +501,24 @@ def main() -> None:
         C.show_error(err or "No se pudo resolver el punto.")
         st.stop()
         return
+    cand_note = None
+    swap = candidate_request(ctx, req, obs, RADII[st.session_state.get("_x_radius", "3 km")])
+    if swap is not None:
+        sid, using_marker = obs.site_id, st.session_state.get(_marker_key(obs.site_id), False)
+        cand_note = (sid, using_marker, swap[1], swap[2], swap[3])
+        if not using_marker:
+            o2, w2, e2 = cache.get_observer(swap[0])
+            if o2 is not None and not e2:
+                req, obs, warns = swap[0], o2, w2
+            else:
+                cand_note = None
     for w in warns:
         if w.severity is not Severity.INFO:
             st.warning(w.text_es, icon=":material/warning:")
+    if cand_note is not None:
+        _candidate_notice(*cand_note)
     st.caption(f"Punto: **{obs.label.split(' [')[0]}** · {C.fmt_num(obs.lat_deg, 4)}°, {C.fmt_num(obs.lon_deg_e, 4)}°E" +
+               (" · candidato del sitio" if cand_note is not None and not cand_note[1] else "") +
                (f" · {_plain_snap(obs)}" if C.show_for("planificador") and _plain_snap(obs) else ""))
 
     C.public_note("En el polo sur lunar el Sol da la vuelta casi pegado al horizonte, así que cualquier relieve manda: una cresta "
@@ -454,7 +565,7 @@ def main() -> None:
                     on_change=_set_height)
 
     radius = RADII[radius_lbl]
-    cx, cy = (0.0, 0.0) if radius is None else (round(obs.x_m / 500.0) * 500.0, round(obs.y_m / 500.0) * 500.0)
+    cx, cy = _crop_center(obs, radius)
     win, extra = _terrain(obs.dem_key, cx, cy, radius, MAX_PX)
     if not np.isfinite(win.data).any():
         C.show_error("El recorte elegido no contiene datos de terreno válidos.")
@@ -488,9 +599,13 @@ def main() -> None:
     else:
         scene = viewer_scene(obs, res, cur, obs.dem_key, cx, cy, radius, labels)
         TV.render_terrain_viewer(scene, height=VIEWER_H)
+        far = (f" Terreno lejano: modelo LOLA de 80 m (±{C.fmt_num(scene['ctx']['half_m'] / 1000, 0)} km, sin foto). " if "ctx" in scene else " ")
+        fine = (f"Suelo cercano: alturas de 5 m interpoladas a {C.fmt_num(scene['patch']['step_m'], 1)} m; el microrrelieve es procedural: no es dato. "
+                if "patch" in scene else "")
         st.caption(f"Visor three.js: terreno real {scene['nx']} × {scene['ny']} vértices ({C.fmt_num(scene['px_m'], 0)} m/celda), "
-                   f"sombras calculadas para {scene['when_utc']} UTC y el Sol y la Tierra donde dicen los números. "
-                   f"{scene['photo']['notice']} Datos enviados al navegador: {C.fmt_num(scene['_bytes'] / 1e6, 2)} MB.")
+                   f"sombras calculadas para {scene['when_utc']} UTC y el Sol y la Tierra donde dicen los números.{far}{fine}"
+                   f"{scene['photo']['notice']} Datos enviados al navegador: {C.fmt_num(scene['_bytes'] / 1e6, 2)} MB "
+                   f"(recorte {C.fmt_num(scene['_bytes_crop'] / 1e6, 2)} + terreno lejano y suelo cercano {C.fmt_num(scene['_bytes_extra'] / 1e6, 2)}).")
         with st.expander("Descripción de la escena (modo lectura)"):
             st.write(scene["description"])
     st.markdown("#### Mapa topográfico")

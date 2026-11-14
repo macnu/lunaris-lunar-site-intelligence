@@ -2,7 +2,9 @@
  * Convenciones de la escena: origen = observador (a la altura de su suelo); X = x del plano estereográfico polar sur,
  * Z = -y del plano (el norte de rejilla queda en -Z), Y = altura (m) menos la caída por curvatura lunar.
  * Azimut de rejilla g = lon + A (A = azimut N→E local): dirección en el plano (sin g, -cos g).
- * La luz y las sombras NO son de three.js: las sombras vienen de la máscara calculada por lsi.terrain.shadows (canal B de la textura). */
+ * La luz y las sombras NO son de three.js: las sombras vienen de la máscara calculada por lsi.terrain.shadows (canal B de la textura).
+ * Tres mallas: el recorte (foto + sombras), el TERRENO DE CONTEXTO (DEM LOLA de 80 m, sin foto, con su propia iluminación, degradado a negro
+ * en el borde) y un PARCHE FINO junto al observador (5 m nativos interpolados a 2,5 m; microrrelieve procedural = solo sombreado, no es dato). */
 (function () {
   'use strict';
   var D = JSON.parse(document.getElementById('lsi-data').textContent);
@@ -26,14 +28,14 @@
   renderer.setClearColor(0x000000, 1);
 
   /* ------------------------------------------------------------------ estado (se recuerda entre recargas) */
-  var S = { layers: { relief: true, photo: true, shadow: true, slope: false, names: true, stars: true, horizon: true },
+  var S = { layers: { relief: true, photo: true, shadow: true, slope: false, names: true, stars: true, horizon: true, ctx: true, micro: true },
             mode: 'oblique', az: D.view_az, exag: D.exag0, bigEarth: false };
   var KEY = 'lsi_terrain_viewer_v1';
   try {
     var saved = JSON.parse(sessionStorage.getItem(KEY) || 'null');
     if (saved) {
       Object.keys(S.layers).forEach(function (k) { if (saved.layers && typeof saved.layers[k] === 'boolean') S.layers[k] = saved.layers[k]; });
-      if (['top', 'oblique', 'observer'].indexOf(saved.mode) >= 0) S.mode = saved.mode;
+      if (['top', 'oblique', 'wide', 'observer'].indexOf(saved.mode) >= 0) S.mode = saved.mode;
       if (isFinite(saved.az)) S.az = saved.az;
       if (isFinite(saved.exag)) S.exag = Math.min(8, Math.max(1, saved.exag));
       if (typeof saved.bigEarth === 'boolean') S.bigEarth = saved.bigEarth;
@@ -61,7 +63,10 @@
     return H[k] * (1 - fx) * (1 - fy) + H[k + 1] * fx * (1 - fy) + H[k + nx] * (1 - fx) * fy + H[k + nx + 1] * fx * fy;
   }
   var GZ = sampleH(0, 0); if (!isFinite(GZ)) GZ = D.obs.z;
+  var CTXC = D.ctx || null, PAT = D.patch || null, OBS_GY = 0, FEATHER = 100;     // OBS_GY: suelo bajo el observador (parche) respecto al del recorte
+  if (S.mode === 'wide' && !CTXC) S.mode = 'oblique';
   function curv(X, Z) { return (X * X + Z * Z) / (2 * R_M); }
+  function smooth01(t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
   function terrainY(X, Z) { var h = sampleH(X, Z); return isFinite(h) ? (h - GZ - curv(X, Z)) * exagNow : -1e9; }
   function gridDir(azLocal, el) {                                    // vector unitario de escena para (azimut N→E, elevación)
     var g = (D.north_deg + azLocal) * DEG, e = el * DEG;
@@ -83,7 +88,7 @@
     tex.minFilter = THREE.LinearMipmapLinearFilter; tex.magFilter = THREE.LinearFilter;
     tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
     tex.generateMipmaps = true; tex.flipY = true; tex.needsUpdate = true;
-    ready = true; buildTerrain(1); applyAll(); startLoop();
+    ready = true; matP.uniforms.uTex.value = tex; buildPatch(); buildContext(); buildTerrain(1); applyAll(); startLoop();
   };
   texImg.onerror = function () { fail('No se pudo decodificar la textura del terreno.'); };
   texImg.src = 'data:image/png;base64,' + D.tex_png;
@@ -93,13 +98,20 @@
                                    -Math.cos(D.sun.grid_az_deg * DEG) * Math.cos(D.sun.el_c_deg * DEG));  // el Sol en el centro del recorte (sombras)
   var expo = 1 / Math.max(Math.sin(Math.max(D.sun.el_c_deg, 0) * DEG), 0.10);   // exposición automática: con el Sol rasante el relieve sigue legible
 
-  var VERT = 'attribute vec3 nrm; varying vec3 vN; varying vec2 vUv;\n' +
-    'void main(){ vN = nrm; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
+  var VERT = 'attribute vec3 nrm; varying vec3 vN; varying vec2 vUv; varying vec2 vXZ; varying float vD;\n' +
+    'void main(){ vN = nrm; vUv = uv; vXZ = position.xz; vec4 mv = modelViewMatrix * vec4(position, 1.0); vD = length(mv.xyz); gl_Position = projectionMatrix * mv; }';
+  var NOISE = [
+    'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+    'float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);',
+    '  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }'].join('\n');
   var FRAG = [
     'precision highp float;',
-    'uniform sampler2D uTex; uniform vec3 uSun; uniform float uExpo; uniform float uAmb; uniform vec4 uFlags; uniform vec2 uSize;',
-    'varying vec3 vN; varying vec2 vUv;',
-    'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+    'uniform sampler2D uTex; uniform vec3 uSun; uniform float uExpo; uniform float uAmb; uniform vec4 uFlags; uniform vec2 uSize; uniform float uMicro;',
+    'varying vec3 vN; varying vec2 vUv; varying vec2 vXZ; varying float vD;',
+    NOISE,
+    '#ifdef MICRO',
+    'float mh(vec2 p){ return vn(p / 0.8) * 0.5 + vn(p / 2.3) * 0.35 + vn(p / 6.5) * 0.5; }',     // microrrelieve PROCEDURAL (no es dato): solo cambia la normal de sombreado
+    '#endif',
     'vec3 ramp(float s){',
     '  vec3 c = mix(vec3(0.15,0.65,0.35), vec3(0.75,0.85,0.25), smoothstep(3.0, 9.0, s));',
     '  c = mix(c, vec3(1.0,0.75,0.2), smoothstep(9.0, 15.0, s));',
@@ -111,6 +123,13 @@
     '  float hasP = step(0.5, t.g) * uFlags.y;',
     '  float g = (hash(floor(vUv * uSize)) - 0.5) * 0.07;',                      // granulosidad muy sutil, solo donde no hay foto
     '  float alb = hasP > 0.5 ? pow(t.r, 2.2) * 1.15 : 0.17 * (1.0 + g);',
+    '  float sl = degrees(acos(clamp(n.y, -1.0, 1.0)));',
+    '#ifdef MICRO',
+    '  float md = uMicro * (1.0 - smoothstep(60.0, 500.0, vD));',                // solo se nota de cerca
+    '  if (md > 0.001) { vec2 e = vec2(0.25, 0.0);',
+    '    float gx = (mh(vXZ + e) - mh(vXZ - e)) / 0.5, gz = (mh(vXZ + e.yx) - mh(vXZ - e.yx)) / 0.5;',
+    '    n = normalize(n + md * 0.03 * vec3(-gx, 0.0, -gz)); }',
+    '#endif',
     '  float ndl = max(dot(n, uSun), 0.0);',
     '  float lam = 1.0 - exp(-uExpo * ndl * 1.3);',
     '  float flt = 1.0 - exp(-uExpo * max(uSun.y, 0.0) * 1.3);',
@@ -119,15 +138,99 @@
     '  float L = uAmb + dl * sh;',
     '  vec3 col = vec3(clamp(alb * L * 1.15, 0.0, 1.0));',
     '  col = pow(col, vec3(1.0 / 2.2));',
-    '  if (uFlags.w > 0.5) { float s = degrees(acos(clamp(n.y, -1.0, 1.0))); col = mix(col, ramp(s) * (0.55 + 0.45 * sh), 0.6); }',
+    '  if (uFlags.w > 0.5) { col = mix(col, ramp(sl) * (0.55 + 0.45 * sh), 0.6); }',
     '  gl_FragColor = vec4(col, 1.0);',
     '}'].join('\n');
-  var mat = new THREE.ShaderMaterial({
-    vertexShader: VERT, fragmentShader: FRAG,
-    uniforms: { uTex: { value: null }, uSun: { value: sunLight.clone().normalize() }, uExpo: { value: expo }, uAmb: { value: 0.012 },
-                uFlags: { value: new THREE.Vector4(1, 1, 1, 0) }, uSize: { value: new THREE.Vector2(nx, ny) } }
-  });
+  function terrainUniforms() {
+    return { uTex: { value: null }, uSun: { value: sunLight.clone().normalize() }, uExpo: { value: expo }, uAmb: { value: 0.012 },
+             uFlags: { value: new THREE.Vector4(1, 1, 1, 0) }, uSize: { value: new THREE.Vector2(nx, ny) }, uMicro: { value: 1 } };
+  }
+  var mat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: terrainUniforms() });
+  var matP = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: terrainUniforms(), defines: { MICRO: 1 },
+                                        polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  // contexto: gris oscuro sin foto, iluminación por vértice (calculada sobre el DEM de 80 m) y degradado hacia el color del fondo en el borde
+  var VERT_C = 'attribute vec3 nrm; attribute float lit; varying vec3 vN; varying float vL; varying vec2 vXZ;\n' +
+    'void main(){ vN = nrm; vL = lit; vXZ = position.xz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
+  var FRAG_C = [
+    'precision highp float;',
+    'uniform vec3 uSun; uniform float uExpo; uniform float uAmb; uniform vec4 uFlags; uniform vec2 uCtr; uniform float uHalf; uniform vec3 uFade;',
+    'varying vec3 vN; varying float vL; varying vec2 vXZ;',
+    'void main(){',
+    '  vec3 n = normalize(vN);',
+    '  float ndl = max(dot(n, uSun), 0.0);',
+    '  float lam = 1.0 - exp(-uExpo * ndl * 1.3);',
+    '  float flt = 1.0 - exp(-uExpo * max(uSun.y, 0.0) * 1.3);',
+    '  float dl = uFlags.x > 0.5 ? lam : flt;',
+    '  float sh = uFlags.z > 0.5 ? vL : 1.0;',
+    '  float L = uAmb + dl * sh;',
+    '  vec3 col = pow(vec3(clamp(0.085 * L * 1.15, 0.0, 1.0)), vec3(1.0 / 2.2));',
+    '  float r = max(abs(vXZ.x - uCtr.x), abs(vXZ.y - uCtr.y)) / uHalf;',
+    '  col = mix(uFade, col, 1.0 - smoothstep(0.55, 0.98, r));',
+    '  gl_FragColor = vec4(col, 1.0);',
+    '}'].join('\n');
+  var matC = new THREE.ShaderMaterial({ vertexShader: VERT_C, fragmentShader: FRAG_C, polygonOffset: true, polygonOffsetFactor: 3, polygonOffsetUnits: 3,
+    uniforms: { uSun: { value: sunLight.clone().normalize() }, uExpo: { value: Math.min(expo, 1.0) }, uAmb: { value: 0.012 }, uFlags: { value: new THREE.Vector4(1, 0, 1, 0) },
+                uCtr: { value: new THREE.Vector2() }, uHalf: { value: 1 }, uFade: { value: new THREE.Vector3(0, 0, 0) } } });
+  var FADE_OBS = [0.047, 0.051, 0.067];                              // = color de la silueta del horizonte calculado (0x0c0d11)
+  var ctxMesh = null, patchMesh = null, ctxLblP = null;
+  function decode16(q) { return new Uint16Array(q.buffer, q.byteOffset, q.byteLength >> 1); }
+  function buildContext() {                                          // malla de contexto: agujero donde está el recorte (sus alturas coinciden en el borde)
+    if (!CTXC) return;
+    var n = CTXC.n, Zq = decode16(b64(CTXC.z.b64)), Lq = b64(CTXC.lit_b64), span = CTXC.z.max - CTXC.z.min, st = CTXC.step_m;
+    var h = new Float32Array(n * n), pos = new Float32Array(n * n * 3), nrm = new Float32Array(n * n * 3), lit = new Float32Array(n * n), r, c, k;
+    for (k = 0; k < n * n; k++) { h[k] = CTXC.z.min + span * Zq[k] / 65534; lit[k] = Lq[k] / 255; }
+    var xa = D.x0_m, xb = D.x0_m + (nx - 1) * px, yb = D.y0_m - (ny - 1) * px, ya = D.y0_m, inside = new Uint8Array(n * n);
+    for (r = 0; r < n; r++) for (c = 0; c < n; c++) {
+      k = r * n + c; var x = CTXC.x0_m + c * st, y = CTXC.y0_m - r * st, X = x - OX, Z = OY - y;
+      pos[3 * k] = X; pos[3 * k + 1] = h[k] - GZ - curv(X, Z); pos[3 * k + 2] = Z;
+      var cl = Math.max(c - 1, 0), cr = Math.min(c + 1, n - 1), ru = Math.max(r - 1, 0), rd = Math.min(r + 1, n - 1);
+      var dxj = (h[r * n + cr] - h[r * n + cl]) / ((cr - cl) * st), dzi = (h[rd * n + c] - h[ru * n + c]) / ((rd - ru) * st), l = Math.sqrt(dxj * dxj + 1 + dzi * dzi);
+      nrm[3 * k] = -dxj / l; nrm[3 * k + 1] = 1 / l; nrm[3 * k + 2] = -dzi / l;
+      inside[k] = (x >= xa && x <= xb && y >= yb && y <= ya) ? 1 : 0;
+    }
+    var idx = [];
+    for (r = 0; r < n - 1; r++) for (c = 0; c < n - 1; c++) {
+      var a = r * n + c, b = a + 1, d = a + n, e = d + 1;
+      if (inside[a] && inside[b] && inside[d] && inside[e]) continue;
+      idx.push(a, d, b, b, d, e);
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('nrm', new THREE.BufferAttribute(nrm, 3));
+    g.setAttribute('lit', new THREE.BufferAttribute(lit, 1)); g.setIndex(new THREE.BufferAttribute(new Uint32Array(idx), 1));
+    ctxMesh = new THREE.Mesh(g, matC); ctxMesh.frustumCulled = false; scene.add(ctxMesh);
+    var ccx = CTXC.x0_m + (n - 1) / 2 * st - OX, ccz = OY - (CTXC.y0_m - (n - 1) / 2 * st);
+    matC.uniforms.uCtr.value.set(ccx, ccz); matC.uniforms.uHalf.value = CTXC.half_m;
+    var kl = Math.floor(n * 0.12) * n + Math.floor(n * 0.3); ctxLblP = new THREE.Vector3(pos[3 * kl], pos[3 * kl + 1] + 600, pos[3 * kl + 2]);
+  }
+  function buildPatch() {                                            // suelo fino junto al observador; en su borde se funde con la malla del recorte
+    if (!PAT) return;
+    var n = PAT.n, Zq = decode16(b64(PAT.z.b64)), span = PAT.z.max - PAT.z.min, st = PAT.step_m, half = PAT.half_m, r, c, k;
+    var hh = new Float32Array(n * n), X = new Float32Array(n * n), Z = new Float32Array(n * n);
+    for (r = 0; r < n; r++) for (c = 0; c < n; c++) {
+      k = r * n + c; X[k] = PAT.x0_m + c * st - OX; Z[k] = OY - (PAT.y0_m - r * st);
+      var hp = PAT.z.min + span * Zq[k] / 65534, hc = sampleH(X[k], Z[k]), w = smooth01((half - Math.max(Math.abs(X[k]), Math.abs(Z[k]))) / FEATHER);
+      hh[k] = isFinite(hc) ? hc + (hp - hc) * w : hp;
+    }
+    var pos = new Float32Array(n * n * 3), nrm = new Float32Array(n * n * 3), uv = new Float32Array(n * n * 2);
+    for (r = 0; r < n; r++) for (c = 0; c < n; c++) {
+      k = r * n + c;
+      pos[3 * k] = X[k]; pos[3 * k + 1] = hh[k] - GZ - curv(X[k], Z[k]); pos[3 * k + 2] = Z[k];
+      var cl = Math.max(c - 1, 0), cr = Math.min(c + 1, n - 1), ru = Math.max(r - 1, 0), rd = Math.min(r + 1, n - 1);
+      var dxj = (hh[r * n + cr] - hh[r * n + cl]) / ((cr - cl) * st), dzi = (hh[rd * n + c] - hh[ru * n + c]) / ((rd - ru) * st), l = Math.sqrt(dxj * dxj + 1 + dzi * dzi);
+      nrm[3 * k] = -dxj / l; nrm[3 * k + 1] = 1 / l; nrm[3 * k + 2] = -dzi / l;
+      var j = (X[k] + OX - D.x0_m) / px, i = (D.y0_m - OY + Z[k]) / px;
+      uv[2 * k] = Math.max(0, Math.min(1, (j + 0.5) / nx)); uv[2 * k + 1] = Math.max(0, Math.min(1, 1 - (i + 0.5) / ny));
+    }
+    var idx = new Uint32Array((n - 1) * (n - 1) * 6), q = 0;
+    for (r = 0; r < n - 1; r++) for (c = 0; c < n - 1; c++) { var a = r * n + c, b = a + 1, d = a + n, e = d + 1; idx[q++] = a; idx[q++] = d; idx[q++] = b; idx[q++] = b; idx[q++] = d; idx[q++] = e; }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('nrm', new THREE.BufferAttribute(nrm, 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setIndex(new THREE.BufferAttribute(idx, 1));
+    patchMesh = new THREE.Mesh(g, matP); patchMesh.frustumCulled = false; scene.add(patchMesh);
+    OBS_GY = hh[(n >> 1) * n + (n >> 1)] - GZ;
+  }
   var terrain = null, stride = 1;
+  function inPatch(pos, v) { return Math.abs(pos[3 * v]) <= PAT.half_m && Math.abs(pos[3 * v + 2]) <= PAT.half_m; }
   function buildTerrain(st) {
     stride = st;
     var rows = [], cols = [], i, j;
@@ -150,7 +253,9 @@
     var idx = [];
     for (r = 0; r < nr - 1; r++) for (c = 0; c < nc - 1; c++) {
       var a = r * nc + c, b = a + 1, d = a + nc, e = d + 1;
-      if (okv[a] && okv[b] && okv[d] && okv[e]) idx.push(a, d, b, b, d, e);
+      if (!(okv[a] && okv[b] && okv[d] && okv[e])) continue;
+      if (PAT && inPatch(pos, a) && inPatch(pos, b) && inPatch(pos, d) && inPatch(pos, e)) continue;       // ahí se dibuja el parche fino
+      idx.push(a, d, b, b, d, e);
     }
     var g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -160,7 +265,7 @@
     if (terrain) { terrain.geometry.dispose(); terrain.geometry = g; }
     else { terrain = new THREE.Mesh(g, mat); terrain.frustumCulled = false; scene.add(terrain); }
     mat.uniforms.uTex.value = tex;
-    terrain.scale.y = exagNow;
+    applyExag();
     setText('mesh-info', 'Malla ' + nc + '×' + nr + ' vértices (' + (px * st).toFixed(0) + ' m)');
   }
 
@@ -260,7 +365,8 @@
   var obsLbl = addLabel(D.obs.label, 'obs', new THREE.Vector3(0, EXT * 0.3, 0), { kind: 'obs' });
   D.names.forEach(function (n) { addLabel(n[0], 'name', new THREE.Vector3(), { kind: 'name', X: n[1] - OX, Z: OY - n[2], lift: EXT * 0.012 }); });
   var noPhotoLbl = null;
-  if (D.photo.nophoto_xz) noPhotoLbl = addLabel('sin foto en esta zona', 'nophoto', new THREE.Vector3(), { kind: 'nophoto', X: D.photo.nophoto_xz[0], Z: D.photo.nophoto_xz[1], lift: EXT * 0.01 });
+  if (D.photo.nophoto_xz) noPhotoLbl = addLabel(D.photo.psr_pct >= 50 ? 'sin foto: sombra permanente' : 'sin foto en esta zona', 'nophoto', new THREE.Vector3(), { kind: 'nophoto', X: D.photo.nophoto_xz[0], Z: D.photo.nophoto_xz[1], lift: EXT * 0.01 });
+  var ctxLbl = CTXC ? addLabel('Terreno lejano: modelo LOLA de 80 m', 'ctxl', new THREE.Vector3(), { kind: 'ctx' }) : null;
   var sunLbl = addLabel('Sol', 'sky', new THREE.Vector3(), { kind: 'sun' });
   var earthLbl = addLabel('Tierra', 'earth', new THREE.Vector3(), { kind: 'earth' });
   function placeLabels() {
@@ -271,6 +377,8 @@
       else if (o.kind === 'name' || o.kind === 'nophoto') {
         show = S.layers.names && (o.kind === 'name' || S.layers.photo);
         if (show) { var ty = terrainY(o.X, o.Z); if (ty < -1e8) show = false; else { o.p.set(o.X, ty + o.lift, o.Z); show = visibleFrom(o.p); } }
+      } else if (o.kind === 'ctx') {
+        show = S.mode !== 'observer' && S.layers.ctx && !!ctxLblP; if (show) o.p.set(ctxLblP.x, ctxLblP.y * exagNow, ctxLblP.z);
       } else if (o.kind === 'sun' || o.kind === 'earth') {
         var d = o.kind === 'sun' ? sunLocal : earthDir, az = o.kind === 'sun' ? D.sun.az_deg : D.earth.az_deg, el = o.kind === 'sun' ? D.sun.el_deg : D.earth.el_deg;
         show = obsView && el > horizonAt(az) + 0.05;
@@ -294,24 +402,28 @@
   /* ------------------------------------------------------------------ cámara */
   var controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.12; controls.screenSpacePanning = false;
-  controls.minDistance = Math.max(40, EXT * 0.012); controls.maxDistance = EXT * 2.6; controls.maxPolarAngle = 86 * DEG;
+  controls.minDistance = Math.max(40, EXT * 0.012); controls.maxPolarAngle = 86 * DEG;
+  var CTX_EXT = CTXC ? 2 * CTXC.half_m : 0;
+  controls.maxDistance = CTXC ? CTX_EXT * 1.15 : EXT * 2.6;      // con contexto: la cámara no se aleja lo bastante para ver el borde del terreno lejano
   var obsAz = S.az, obsPitch = 1.5, obsFov = 62;
   function setMode(m, silent) {
+    if (m === 'wide' && !CTXC) m = 'oblique';
     S.mode = m; exagNow = m === 'observer' ? 1 : S.exag;
-    if (terrain) terrain.scale.y = exagNow;
+    applyExag();
     camera.up.set(0, 1, 0);
     if (m === 'observer') {
       controls.enabled = false; camera.near = 0.3; camera.far = 150000; camera.fov = obsFov;
-      camera.position.set(0, D.obs.h, 0); orientObserver();
+      camera.position.set(0, OBS_GY + D.obs.h, 0); orientObserver();
     } else {
       controls.enabled = true; camera.near = Math.max(EXT * 0.0006, 2); camera.far = 150000; camera.fov = 45;
-      var d = EXT * (m === 'top' ? 1.2 : 0.95), pol = (m === 'top' ? 1.0 : 62) * DEG;
+      var d = m === 'wide' ? CTX_EXT * 0.55 : EXT * (m === 'top' ? 1.2 : 0.95), pol = (m === 'top' ? 1.0 : m === 'wide' ? 52 : 62) * DEG;
       controls.target.set(0, 0, 0);
       camera.position.set(0, d * Math.cos(pol), d * Math.sin(pol));
       camera.lookAt(controls.target); controls.update();
     }
     camera.updateProjectionMatrix(); applyAll(); updateUi(); dirty = true; persist();
   }
+  function applyExag() { [terrain, patchMesh, ctxMesh].forEach(function (o) { if (o) o.scale.y = exagNow; }); }
   function orientObserver() {
     var d = gridDir(obsAz, obsPitch); camera.lookAt(camera.position.clone().add(d)); dirty = true;
   }
@@ -341,13 +453,15 @@
   function fmt(x, d) { return (isFinite(x) ? x : NaN).toFixed(d).replace('.', ','); }
   function applyAll() {
     var L = S.layers; mat.uniforms.uFlags.value.set(L.relief ? 1 : 0, L.photo ? 1 : 0, L.shadow ? 1 : 0, L.slope ? 1 : 0);
+    matC.uniforms.uFlags.value.set(L.relief ? 1 : 0, 0, L.shadow ? 1 : 0, 0); matC.uniforms.uFade.value.fromArray(S.mode === 'observer' ? FADE_OBS : [0, 0, 0]);
+    matP.uniforms.uMicro.value = L.micro ? 1 : 0; if (ctxMesh) ctxMesh.visible = L.ctx;
     stars.visible = L.stars; if (horizon) horizon.visible = L.horizon && S.mode === 'observer';   // la silueta solo tiene sentido desde el observador
     sunGlow.visible = D.sun.el_deg > horizonAt(D.sun.az_deg) || S.mode !== 'observer';   // sin atmósfera no hay resplandor del Sol tapado
     marker.visible = S.mode !== 'observer';                       // el observador no se ve a sí mismo
     sizeEarth(); dirty = true;
   }
   function updateUi() {
-    ['top', 'oblique', 'observer'].forEach(function (m) { $('m-' + m).setAttribute('aria-pressed', S.mode === m ? 'true' : 'false'); });
+    ['top', 'oblique', 'wide', 'observer'].forEach(function (m) { $('m-' + m).setAttribute('aria-pressed', S.mode === m ? 'true' : 'false'); });
     $('obs-ctl').hidden = S.mode !== 'observer'; $('exag-ctl').hidden = S.mode === 'observer';
     $('scale').hidden = S.mode === 'observer';
     setText('az-val', Math.round(obsAz) + '° (N 0°, E 90°)');
@@ -359,7 +473,11 @@
     var e2 = $('earth-state'); e2.textContent = D.earth.el_deg < 0 ? 'bajo el horizonte local' : (cov2 ? 'tapada por el horizonte (a ' + fmt(hz2, 1) + '°)' : 'visible');
     e2.className = cov2 ? 'hid' : '';
     if (S.mode === 'observer') setText('hud-top', 'Vista del observador a ' + fmt(D.obs.h, 1) + ' m · mirando al acimut ' + Math.round(obsAz) + '° · campo ' + Math.round(obsFov) + '°');
-    else setText('hud-top', S.mode === 'top' ? 'Vista cenital' : 'Vista oblicua');
+    else setText('hud-top', S.mode === 'top' ? 'Vista cenital' : S.mode === 'wide' ? 'Vista orbital amplia: recorte y terreno lejano' : 'Vista oblicua');
+    var lg = [];
+    if (CTXC && S.layers.ctx) lg.push('Terreno lejano: modelo LOLA de 80 m, sin foto.');
+    if (PAT && S.layers.micro) lg.push('Suelo cercano: relieve de 5 m interpolado a ' + PAT.step_m + ' m; microrrelieve procedural: no es dato.');
+    setText('legend', lg.join(' '));
   }
   function nice(m) { var p = Math.pow(10, Math.floor(Math.log10(m))), f = m / p; return (f >= 5 ? 5 : f >= 2 ? 2 : 1) * p; }
   function updateScaleNorth() {
@@ -373,21 +491,23 @@
     var ang = Math.atan2((b.x - a.x) * renderer.domElement.clientWidth, (b.y - a.y) * renderer.domElement.clientHeight) * 180 / Math.PI;
     $('north-i').style.transform = 'rotate(' + ang + 'deg)';
   }
-  [['relief', 'l-relief'], ['photo', 'l-photo'], ['shadow', 'l-shadow'], ['slope', 'l-slope'], ['names', 'l-names'], ['stars', 'l-stars'], ['horizon', 'l-horizon']].forEach(function (p) {
+  [['relief', 'l-relief'], ['photo', 'l-photo'], ['shadow', 'l-shadow'], ['slope', 'l-slope'], ['names', 'l-names'], ['stars', 'l-stars'], ['horizon', 'l-horizon'], ['ctx', 'l-ctx'], ['micro', 'l-micro']].forEach(function (p) {
     var cb = $(p[1]); cb.checked = S.layers[p[0]];
+    if ((p[0] === 'ctx' && !CTXC) || (p[0] === 'micro' && !PAT)) { cb.disabled = true; cb.checked = false; cb.title = 'No hay datos para esta capa en este punto'; return; }
     cb.addEventListener('change', function () {
-      S.layers[p[0]] = cb.checked; applyAll(); persist();
+      S.layers[p[0]] = cb.checked; applyAll(); updateUi(); persist();
       if (p[0] === 'names') for (var i = 0; i < LBL.length; i++) if (LBL[i].kind === 'name') LBL[i].el.hidden = !cb.checked;
     });
   });
   var bigCb = $('l-big'); bigCb.checked = S.bigEarth; bigCb.addEventListener('change', function () { S.bigEarth = bigCb.checked; sizeEarth(); dirty = true; persist(); });
-  ['top', 'oblique', 'observer'].forEach(function (m) { $('m-' + m).addEventListener('click', function () { setMode(m); }); });
+  ['top', 'oblique', 'wide', 'observer'].forEach(function (m) { $('m-' + m).addEventListener('click', function () { setMode(m); }); });
+  if (!CTXC) { $('m-wide').disabled = true; $('m-wide').title = 'No hay terreno lejano (falta el DEM de 80 m)'; }
   var azIn = $('az'); azIn.value = Math.round(S.az);
   azIn.addEventListener('input', function () { obsAz = +azIn.value; S.az = obsAz; updateUi(); if (S.mode === 'observer') orientObserver(); persist(); });
   $('az-sun').addEventListener('click', function () { obsAz = D.sun.az_deg; azIn.value = Math.round(obsAz); S.az = obsAz; updateUi(); orientObserver(); persist(); });
   $('az-earth').addEventListener('click', function () { obsAz = D.earth.az_deg; azIn.value = Math.round(obsAz); S.az = obsAz; updateUi(); orientObserver(); persist(); });
   var exIn = $('exag'); exIn.value = S.exag;
-  exIn.addEventListener('input', function () { S.exag = +exIn.value; if (S.mode !== 'observer') { exagNow = S.exag; terrain.scale.y = exagNow; } updateUi(); dirty = true; persist(); });
+  exIn.addEventListener('input', function () { S.exag = +exIn.value; if (S.mode !== 'observer') { exagNow = S.exag; applyExag(); } updateUi(); dirty = true; persist(); });
   $('reset').addEventListener('click', function () { obsFov = 62; obsPitch = 1.5; setMode(S.mode); });
   $('read').addEventListener('click', function () { var d = $('desc'); d.hidden = !d.hidden; $('read').setAttribute('aria-pressed', d.hidden ? 'false' : 'true'); });
   setText('desc-txt', D.description); setText('sr-desc', D.description);
@@ -396,6 +516,7 @@
   setText('i-earth', 'az ' + fmt(D.earth.az_deg, 1) + '° · el ' + fmt(D.earth.el_deg, 2) + '°');
   setText('i-lit', fmt(D.lit_pct, 0) + ' %');
   setText('i-pos', D.obs.pos_text); setText('notice', D.photo.notice);
+  setText('chip', 'Foto: ' + fmt(D.photo.photo_pct, 0) + ' % del recorte' + (D.photo.psr_pct >= 50 && D.photo.photo_pct < 97 ? ' · lo que falta es sombra permanente (PSR)' : ''));
   setText('photo-detail', D.photo.detail);
   obsAz = S.az;
 
@@ -421,11 +542,15 @@
       requestAnimationFrame(loop);
       var ch = controls.enabled ? controls.update() : false;
       if (dirty || ch) {
+        if (S.mode !== 'observer') {                              // plano cercano proporcional a la distancia: sin z-fighting en las vistas lejanas
+          var nr = Math.min(Math.max(camera.position.distanceTo(controls.target) * 0.01, 2), 400);
+          if (Math.abs(nr - camera.near) > camera.near * 0.2) { camera.near = nr; camera.updateProjectionMatrix(); }
+        }
         sky.position.copy(camera.position); marker.position.set(0, 0, 0);
         renderer.render(scene, camera); placeLabels(); updateScaleNorth(); dirty = false;
       }
     })();
-    window.__lsiReady = { stride: stride, ms: ms, nx: nx, ny: ny };
+    window.__lsiReady = { stride: stride, ms: ms, nx: nx, ny: ny, ctx: !!ctxMesh, patch: !!patchMesh };
   }
   window.__lsi = { setMode: setMode, get state() { return S; }, camera: camera, scene: scene };
 })();

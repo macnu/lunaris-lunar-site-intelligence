@@ -58,6 +58,39 @@ def test_sin_foto_no_se_inventa_textura():
     assert s2["photo"]["nophoto_xz"] is not None       # un cuarto del recorte sin foto: rótulo en su centroide
 
 
+def _extras():
+    from lsi.data import viewer_context as VC
+    n = VC.CTX_N
+    ctx = dict(heights=np.random.default_rng(1).normal(size=(n, n)).astype(np.float32) * 50, lit=np.random.default_rng(2).random((n, n)).astype(np.float32),
+               x0_m=-20000.0, y0_m=20000.0, step_m=40000.0 / (n - 1), half_m=20000.0, n=n)
+    z = np.random.default_rng(3).normal(size=(281, 281)).astype(np.float32)
+    patch = dict(heights=z, x0_m=-350.0, y0_m=350.0, step_m=2.5, half_m=350.0, n=281, native_px_m=5.0)
+    return ctx, patch
+
+
+def test_payload_con_contexto_y_parche_acotado():
+    ctx, patch = _extras()
+    rng = np.random.default_rng(3)
+    s = TV.build_scene(heights=rng.normal(size=(64, 64)), x0_m=-100.0, y0_m=100.0, px_m=5.0, illum=rng.random((64, 64)), photo=None, photo_valid=None,
+                       photo_source="none", photo_native_px_m=5.0, obs=dict(x=0.0, y=0.0, lat=-85.9, lon=2.6, h=2.0, z=0.0, label="P", north_deg=0.0),
+                       sun=dict(az_deg=95.0, el_deg=1.0, grid_az_deg=97.0, el_c_deg=1.0, radius_deg=0.267),
+                       earth=dict(az_deg=350.0, el_deg=5.7, radius_deg=0.95), horizon_az=[], horizon_el=[], names=(), when_utc="x", lit_pct=1.0,
+                       context=ctx, patch=patch, psr_pct=80.0)
+    assert s["_bytes_crop"] < TV.MAX_PAYLOAD_BYTES and 0 < s["_bytes_extra"] < 1_500_000
+    assert s["_bytes"] == s["_bytes_crop"] + s["_bytes_extra"]
+    assert "permanentemente sombreada" in s["photo"]["notice"] and "ShadowCam no está integrada" in s["photo"]["notice"]
+    assert s["ctx"]["n"] <= 160 and s["patch"]["step_m"] == 2.5
+    html = TV.viewer_html(s)
+    assert "http" not in TV._BODY and not re.search(r"""(src|href)\s*=\s*["']?(https?:)?//""", html)
+    assert "Microrrelieve" in TV._BODY and "microrrelieve procedural: no es dato" in TV._assets()[3]
+
+
+def test_aviso_psr_solo_si_la_falta_de_foto_es_psr():
+    assert "permanentemente" not in TV.photo_notice("sdem", 5.0, 12.0, 40.0, 10.0)[0]
+    assert "permanentemente" not in TV.photo_notice("sdem", 5.0, 12.0, 1.0, 90.0)[0]     # casi todo con foto: no se explica nada
+    assert "permanentemente" in TV.photo_notice("nac", 1.0, 15.0, 40.0, 90.0)[0]
+
+
 def test_html_autocontenido_sin_red():
     html = TV.viewer_html(_scene())
     assert "<link" not in html and not re.search(r"<script[^>]+src=", html)
@@ -101,7 +134,7 @@ def at(tmp_path, monkeypatch):
 
 @pytest.mark.needs_spice
 @pytest.mark.needs_dem
-def test_explorador_malapert_site04_y_apolo11(at):
+def test_explorador_malapert_site04_degerlache_y_apolo11(at):
     assert not at.exception
     txt = " ".join(e.value for e in (*at.markdown, *at.caption))
     assert "Visor 3D" in txt and "Visor three.js" in txt                       # Malapert (SDEM + foto)
@@ -109,6 +142,11 @@ def test_explorador_malapert_site04_y_apolo11(at):
     at.sidebar.selectbox(key="_w_site").set_value("site04").run()               # LOLA + mosaico NAC
     assert not at.exception
     assert "Visor three.js" in " ".join(e.value for e in at.caption)
+    assert any("Punto cambiado en este visor" in e.value for e in at.info)       # marcador con < 30 % de foto → candidato con foto
+    assert any(b.label == "Volver al marcador del sitio" for b in at.button)
+    at.sidebar.selectbox(key="_w_site").set_value("site11").run()               # de Gerlache: SDEM + foto
+    assert not at.exception
+    assert "Terreno lejano: modelo LOLA de 80 m" in " ".join(e.value for e in at.caption)
     at.sidebar.selectbox(key="_w_site").set_value("apollo11").run()             # esfera lisa: sin visor, aviso de siempre
     assert not at.exception
     assert any("Sin datos de terreno" in w.value for w in at.warning)
