@@ -1,6 +1,6 @@
 # Metodología
 
-Este documento resume cómo calcula LSI cada resultado. La especificación completa, con casos de prueba numéricos, está en `docs/science/matematica.md`; las convenciones fijas en `docs/science/convenciones.md`; los parámetros en `config/simulation.json`, `config/panels.json` y `config/ground_stations.json` (estaciones terrestres). Donde una cifra es convención de LSI y no dato publicado, se dice. Lo no verificado lleva «a verificar» o «a calibrar».
+Este documento resume cómo calcula LSI cada resultado (estado a 14/11/2026, rama `main`; la identidad visual LUNARIS y el visor 3D three.js están en la rama `feat/lunaris-ui` y **no cambian el cálculo**). La especificación completa, con casos de prueba numéricos, está en `docs/science/matematica.md`; las convenciones fijas en `docs/science/convenciones.md`; los parámetros en `config/simulation.json`, `config/panels.json` y `config/ground_stations.json` (estaciones terrestres). Donde una cifra es convención de LSI y no dato publicado, se dice. Lo no verificado lleva «a verificar» o «a calibrar».
 
 ## 0. Convenciones
 
@@ -48,6 +48,32 @@ el(s) = atan2( (R+z)·cos ψ − (R+z0) ,  (R+z)·sin ψ )        H(az) = max_s 
 Equivale a `atan2(z − z0, s) − s/(2R)`. El horizonte plano del documento base sobrestima la elevación en `s/(2R)`: 0,13° a 8 km, 0,26° a 16 km, 0,49° a 30 km, frente a un disco solar de 0,53° (`matematica.md` §2). Para una esfera lisa el horizonte es `−acos(R/(R+h))` (−0,087° con h = 2 m).
 
 **Campo lejano.** El DEM de 5 m cubre unos 16×16 km (21×21 km en Malapert). Más allá, cada muestra usa el DEM polar LOLA de 80 m (±304 km); si tampoco hay dato, el azimut se marca *limitado* y se devuelve una cota inferior `H_lb` y una superior `H_ub`. El campo lejano es una estimación: el 80 m difiere del 5 m (media −0,15 m, RMS 1,2 m en el solape de Site04; `docs/plan/arquitectura.md`, addendum).
+
+### 2.1 Modo `FAR_FIELD`: relieve aproximado de 80 m para cualquier punto polar
+
+Para un observador **fuera de los tres recortes de 5 m** y dentro del dominio del DEM de 80 m (de 80°S al polo, ±304 km), `HorizonMode.FAR_FIELD` (`terrain.horizon.compute_horizon_far_field`) calcula el horizonte con el 80 m como **única** fuente:
+
+- el suelo del observador sale del propio DEM de 80 m (interpolación bilineal) más la altura del observador;
+- paso radial de **40 m** (medio píxel; uno de 5 m no añade información y cuesta 8 veces más), con la misma fórmula con curvatura de arriba;
+- Sol, Tierra, enlace, ventanas y potencia se calculan igual que en modo DEM con ese horizonte;
+- el **score es parcial** («terreno fino sin datos»): la pendiente a 80 m no se usa como pendiente de aterrizaje (G2 y G3 no existen), la confianza sale **baja** (`c_sup = 0`), no se calcula el rango de incertidumbre (no hay σz/`toterr` a 80 m) y el veredicto es SIN DATOS o NO APTO provisional, **nunca APTO**;
+- dentro de un recorte de 5 m manda el DEM de 5 m; al norte de 80°S sigue la esfera lisa.
+
+**Error medido** (`scripts/validate_far_field.py`, semilla 20260814, 120 puntos reales en Site23, Site11 y Site04, 30 días, 2 m; `docs/validation/horizonte-campo-lejano.md`): horizonte 80 m − 5 m con **RMS 0,68°**, máximo **5,8°** y **sesgo −0,25°** (el 80 m queda más bajo en el 87 % de los puntos: **optimista**); fracción de Sol y de Tierra con \|error\| **p95 0,040 y 0,038**; el veredicto por puertas no terrenales (G0, G1, G4, G6, G7) **cambia en el 10 %** de los puntos. En crestas y cimas el error crece (el punto de Malapert por defecto: 0,69 de Sol con 80 m frente a 0,50 con 5 m, **+0,19**): ahí es una cota optimista. Las cifras entran en `lsi.pipeline.FAR_FIELD_VALIDATION` y en el aviso de la interfaz; si se repite la validación hay que actualizarlas allí.
+
+### 2.2 Iluminación con sombras sobre el relieve (`terrain.shadows`)
+
+El Explorador no solo da el horizonte de un punto: pinta la **iluminación de todo un recorte** para un instante. `shadows.shadow_mask` y `shadows.illumination` hacen, para cada celda, el barrido del **ángulo de horizonte máximo hacia el Sol**. Se marcha desde la celda hacia el Sol y se guarda el mayor ángulo de elevación del terreno visto, con **la misma curvatura lunar** que el horizonte (§2):
+
+```
+tan h(s) = ((R + z)·cos ψ − (R + z0)) / ((R + z)·sin ψ),   ψ = s / R        h = max_s h(s)
+```
+
+- **Sombra** (`shadow_mask`, `True` = en sombra): el centro del Sol queda bajo ese horizonte, `h ≥ elevación del Sol`; con el Sol bajo el horizonte local (< 0°) todo está en sombra. Los píxeles sin dato (NaN) nunca tapan el Sol y salen `False`.
+- **Fracción iluminada con penumbra** (`illumination`): rampa lineal `clip((e − h)/(2·0,267°) + 0,5, 0, 1)` mientras el horizonte cruza el disco (0,267° = radio angular medio del Sol, **a verificar** si importa la estación). Es una aproximación: el área exacta del segmento (§3) no es lineal. `as_texture` la pasa a uint8 y pone 255 donde no hay dato.
+- **Dirección hacia el Sol.** Con `origin_xy_m`, el azimut y la elevación son los vistos en el **centro** del recorte (los da SPICE, igual que el resto del motor) y cada celda recibe los suyos: se reconstruye el vector al Sol en `MOON_ME` con la base ENU del centro y se proyecta en la base ENU de cada celda; el rayo avanza en el plano con dirección `(sin(λ+A), cos(λ+A))`. Hace falta porque junto al polo el «norte local» gira con la longitud: a 10 km del polo (Shackleton) un único azimut se equivoca decenas de grados en el borde del recorte; a 122 km (Malapert), ≈ 5°.
+- **Coste.** El bucle es sobre los pasos del rayo (≈ 100-200, espaciados `max(px, 3 % de s)`), no sobre los píxeles; cada paso es una operación vectorizada. El Explorador calcula las sombras en una rejilla de ≤ 250² celdas (≈ 30 m, la resolución efectiva del DEM) y la amplía a la malla del 3D.
+- **Simplificaciones declaradas.** Distancia = metros del plano (escala estereográfica 1,000 en el polo y 1,001 a 85°S, ≪ 1 %); **no hay sombra de relieve que quede fuera del recorte** (los rayos que salen de él dejan de contar); el disco se trata con la rampa. Es una capa de visualización: **no alimenta el score**. Las sombras no son las de la foto del visor de la rama `feat/lunaris-ui` (la foto LROC es un promedio de pasadas, ver `docs/limitaciones.md` §2c).
 
 **Precisión medida.** Frente a un rayo 3D independiente, el horizonte tiene RMS 0,007°–0,023° y máximo 0,13°; el motor queda por debajo (optimista) por la discretización radial de 5 m (`revision-matematica.md` §3). La estereográfica frente a la geodésica añade ≤ 0,002° a 30 km.
 
@@ -244,3 +270,42 @@ La pantalla no calcula física propia: agrega lo que devuelven `pipeline.run_ana
 | Contactos de un día | `ground_stations.daily_contact_table`: las ventanas **reales** de cada estación que tocan ese día UTC, sin partirlas ni unirlas, con su hora local completa y la etiqueta «continúa del día anterior / al día siguiente» |
 
 Los rangos de incertidumbre bajo cada cifra clave salen de los escenarios del §6; si no se calcularon, la pantalla dice «no calculado».
+
+## 11. Mapa del polo sur
+
+La pantalla «Mapa del polo sur» no calcula física: pinta `visualization.polar_map` con datos de `data.polar_view`.
+
+- **Base cacheada.** El DEM polar de 80 m (≈ 7600² px) se sombrea (relieve) y se promedia por bloques a ≈ 1270 px (≈ 480 m por celda); se guarda en `data/processed/polar_map/<hash>.npz`, con clave = SHA-256 del DEM + versión del algoritmo (se construye solo la primera vez).
+- **Zoom y desplazamiento.** Los niveles 1, 2, 4, 8, 16, 32 y 64 leen **solo la ventana pedida** del DEM de 80 m (semilado = 304 km / zoom) y la sombrean en el momento; a zoom 1 se usa la base. La imagen se muestra a celdas de ≥ 80 m: no presenta más resolución que el dato.
+- **Referencias.** Paralelos y meridianos en el plano estereográfico polar sur (R = 1737,4 km), curvas de nivel, escala y norte, los **nombres del gazetteer** por diámetro y sin solapes, y los **tres recortes de 5 m** marcados.
+- **Capas reales** (si faltan sus ficheros la capa se oculta con aviso; nunca se inventa): polígonos **PSR** de Mazarico et al. (2011) (`data.psr`), temperatura **Diviner** media, máxima y mínima (Williams et al. 2019, 240 m, `data.thermal`) e **iluminación media publicada** AVGVISIB (60/120 m, 18,6 años, superficie, `data.illum_ref`). Cada capa va rotulada con lo que es (temperatura del regolito estacional; iluminación de superficie en 18,6 años), no como la iluminación del punto simulado.
+- **Un clic fija el punto** con la precisión de la celda del mapa mostrado (se muestra la precisión en km; acercar el zoom la mejora). «Evaluar este punto» lo pasa como coordenadas propias a «Capacidad del sitio», que usa el **DEM de 5 m si cae en un recorte, el relieve aproximado de 80 m (§2.1) si cae en otra parte de 80°S al polo** y la esfera lisa al norte, con el aviso del error medido.
+
+## 12. Contraste con la iluminación media publicada: definiciones
+
+`docs/validation/contraste-iluminacion-publicada.md` compara LSI con el mapa **PGDA 69 AVGVISIB** (LOLA, fracción media visible del disco solar «averaged over hourly timesteps spanning 18.6 years», superficie sin altura de observador, disco finito, oscurecimiento de limbo no declarado). Para que la comparación sea justa LSI se ejecuta con **la definición del mapa**, no la del demo:
+
+| Elemento | Mapa publicado | LSI en el contraste |
+|---|---|---|
+| Magnitud | fracción media del disco visible | `metrics.effective_illumination` (media de la fracción de disco visible, §3); **no** `solar_fraction` (cualquier parte del Sol), que es 0,01-0,05 mayor en estos puntos |
+| Altura del observador | superficie (0 m) | `observer_height_m = 0` (el TOP-1 también a 2 m) |
+| Periodo | 18,6 años (ciclo de nutación) | 2024-01-01 a 2042-08-01: **6786 d = 18,58 años**, paso de 3600 s (interno 720 s) |
+| Relieve | DTM de 60-240 m, media a 60 m | DEM de 5 m (resolución efectiva ≈ 30 m) + campo lejano de 80 m, `snap_to_dem=False` |
+| Puntos | malla de 60 m | una rejilla 3×3 al 20, 50 y 80 % de cada eje del recorte (27 puntos) más el TOP-1 del mapa de idoneidad; el publicado se lee **bilineal** en el mismo (x, y) |
+
+Definiciones de los estadísticos (sobre los **24 puntos de rejilla con valor publicado > 0,01**, sin los 3 de oscuridad ni los TOP-1; diferencia `LSI − publicado` en fracción 0-1): **sesgo** = media de la diferencia; **RMS** = raíz de la media de su cuadrado; **dentro de ±0,10** = puntos con \|diferencia\| ≤ 0,10; **r** = correlación de Pearson. La tolerancia de ±0,10 (≈ ±10 puntos) la propone el informe; **no es un criterio publicado**.
+
+| Resultado (14/11/2026) | Valor |
+|---|---|
+| Sesgo / RMS / máximo \|dif\| / r | **−0,01** (−0,007) / **0,09** (0,087) / 0,292 / 0,70 |
+| Dentro de ±0,05 / ±0,10 | 13 de 24 / **19 de 24** |
+| Por sitio (RMS) | Site04 **0,03** (r = 0,98; la PSR de Shackleton coincide: oscuridad total) · Site11 0,11 · Site23 0,08 |
+| TOP-1 (h = 0) frente al publicado | Site04 +0,19, Site11 −0,29, Site23 −0,29: **no validan** (±0,2-0,3) |
+
+Por qué los TOP-1 no validan: (1) **altura del observador**: pasar de 0 a 2 m cambia la iluminación de 0,39 a 0,85 en Site11 y el valor publicado (0,68) cae entre ambos; (2) **periodo**: 18,6 años del mapa frente a 1 año del demo; (3) **sesgo de selección de máximos**: el TOP-1 es el máximo de un campo ruidoso a 2 m. No se ha separado cuánto es error del DEM de 5 m y cuánto suavizado del mapa. El contraste valida el **campo medio** a superficie y 18,6 años, no un punto óptimo ni la cifra a 2 m de un año.
+
+## 13. Datos auxiliares que no entran en el motor
+
+- **Temperatura (Diviner).** `thermal_window(...)` y `thermal_at(...)` devuelven la temperatura del **regolito** (K) interpolada bilineal sobre los mapas de 240 m; `max` = máximo de los máximos de las dos épocas, `min` = mínimo de los mínimos, `mean` = media de los dos promedios (pesos iguales). Con ella `docs/validation/datos-termico-psr.md` propone una `T_amb` de panel de 130 K con banda 40-250 K (`T_amb ≈ 0,84 · T_regolito`, factor de forma 0,84 **supuesto**); **no está aplicada**: `panel_temperature_k` sigue con 100 K y 40-200 K.
+- **PSR.** `psr_mask_window` da una máscara booleana y `psr_distance_m` la distancia **con signo** al borde (negativa dentro). Es sombra permanente en 18,6 años a nivel de superficie, no la sombra del periodo simulado.
+- **SDEM e imagen LROC.** `sdem.terrain_texture_pack` e `imagery.imagery_window` dan altura y textura para el 3D; no tocan horizonte, pendiente ni score. Solo los consume el visor 3D de la rama `feat/lunaris-ui`; la interfaz de `main` no los pinta. Nunca se inventa textura: donde no hay foto, `texture_valid = False`.

@@ -1,6 +1,6 @@
 # Guion de demostración (3 minutos)
 
-Adaptado a lo que LSI hace de verdad. **Todas las cifras se recalcularon el 14/11/2026 ejecutando el pipeline real** (`lsi.pipeline`, SPICE, DEM, red DSN y estaciones reales) y cada una indica su origen. **Reconfirmar antes de grabar:** cualquier cambio del motor, de `config/` o del precálculo las mueve. Ya se movieron una vez: al pasar el score al enlace con continuidad, el punto de de Gerlache cambió de mejor fecha (de 2026-12-16 a 2027-06-21), su score del 16-dic pasó de 98,2 a 95,0 y el *Earthset* de Malapert del 29-dic pasó de 17,4 h a 16,3 h (ver «Coordenadas exactas»).
+Adaptado a lo que LSI hace de verdad, en la rama **`main`**. **Qué se ve y qué no:** el visor 3D con foto, Sol y Tierra reales y vista del observador, y la marca LUNARIS con su navegación superior, **están en la rama `feat/lunaris-ui` y no en `main`**; si grabas el vídeo con esa rama, avísalo y vuelve a comprobar las pantallas (el cálculo es el mismo). Este guion no promete nada de eso en `main`. **Todas las cifras se recalcularon el 14/11/2026 ejecutando el pipeline real** (`lsi.pipeline`, SPICE, DEM, red DSN y estaciones reales) y cada una indica su origen. **Reconfirmar antes de grabar:** cualquier cambio del motor, de `config/` o del precálculo las mueve. Las de los puntos de 5 m (Shackleton TOP-2 y TOP-1, de Gerlache, Malapert) se **volvieron a ejecutar tras añadir el modo de 80 m, el mapa del polo y la comparación por candidato** y no cambiaron (score 94,7, 97,4, 73,9, 95,0 y 98,4 con el mismo veredicto). Ya se movieron una vez: al pasar el score al enlace con continuidad, el punto de de Gerlache cambió de mejor fecha (de 2026-12-16 a 2027-06-21), su score del 16-dic pasó de 98,2 a 95,0 y el *Earthset* de Malapert del 29-dic pasó de 17,4 h a 16,3 h (ver «Coordenadas exactas»).
 
 **Historia:** no basta con ver una montaña lunar; hay que entender si desde un punto concreto se ve el Sol, se ve la Tierra, **si alguna antena terrestre podría hablar con el lander** y durante cuánto tiempo, qué panel y qué montaje lo aprovechan, y qué confianza merece cada resultado.
 
@@ -12,6 +12,7 @@ Adaptado a lo que LSI hace de verdad. **Todas las cifras se recalcularon el 14/1
 4. **Reconfirma las cifras** de las tablas de abajo en la propia app. Si difieren, usa las de la app.
 5. Deja el panel por defecto **Array vertical en mástil** (`tj-gaas-vertical-mast`, GaAs 3J de la misma celda de referencia): su montaje por defecto en el polo es **vertical con seguimiento azimutal** y reproduce las cifras de abajo (405 W/m², 9717 Wh/m² por día en Shackleton). **No elijas «GaAs triple unión (lander)» (`tj-gaas-lander-body`) en la app:** no admite el seguimiento y la pantalla pasa a *Vertical fijo* (Malapert: 272 W/m² de media en vez de 397; Shackleton: 1,4 % de la nominal). Las tablas de abajo con `tj-gaas-lander-body` + seguimiento son del motor (`run_analysis`), no de ese camino de la UI. Deja activado «Mostrar rangos de incertidumbre» en «Capacidad del sitio» (el primer cálculo es lento).
 6. Precalienta la caché abriendo una vez cada punto y pulsando «Calcular la sensibilidad».
+7. **Si vas a enseñar el mapa del polo:** comprueba que están `data/raw/lola80s/` (`python scripts/fetch_data.py`) y las capas (`python scripts/fetch_thermal_psr.py`: Diviner, PSR e iluminación publicada, ≈ 275 MB). Abre «Mapa del polo sur» una vez antes de grabar: la base del relieve se construye y se guarda la primera vez (unos segundos; `data/processed/polar_map/`).
 
 ## Puntos y fechas que se usan
 
@@ -30,7 +31,7 @@ Distancias de Shackleton (`pipeline.snap_candidate`, `prefer="best"`): el punto 
 
 | Tiempo | Acción en pantalla | Mensaje (lo que dices) |
 |---|---|---|
-| **0:00–0:20** | **Buscador**. Escribe «Shackleton»; menciona que hay 9106 lugares (9087 rasgos de la IAU/USGS y 19 sitios de misión). Pulsa «Evaluar este lugar». | «Buscamos por nombre entre 9106 lugares. Pero el nombre es el centro de un rasgo, no un sitio de aterrizaje: LSI elige el mejor punto dentro del rasgo. En Shackleton cae a unos 10 km del centro y a 0,34 km dentro del borde.» |
+| **0:00–0:20** | **Buscador**. Escribe «Shackleton»; menciona que hay 9119 lugares (9087 rasgos de la IAU/USGS y 32 sitios: misiones, zonas con DEM y regiones Artemis III aproximadas). Pulsa «Evaluar este lugar». | «Buscamos por nombre entre 9119 lugares. Pero el nombre es el centro de un rasgo, no un sitio de aterrizaje: LSI elige el mejor punto dentro del rasgo. En Shackleton cae a unos 10 km del centro y a 0,34 km dentro del borde.» |
 | **0:20–0:40** | **Mejores puntos y fechas** → Shackleton, lander sin RHU, 14 d. Señala el punto y su mejor fecha. | «El mapa ordena puntos y fechas. Mejor fecha de inicio para este punto: el 12 de diciembre de 2026. La elección ya tiene en cuenta los huecos de comunicaciones, no solo la luz.» |
 | **0:40–1:20** | **Capacidad del sitio** (la pantalla que sigue al buscador). Recorre **Solar**, **Conectividad**, la sensibilidad al margen y la tabla de bases terrestres con la hora local. | «Con el panel de GaAs, vertical con seguimiento: Sol el 100 % de la ventana, noche máxima 0 h, unos 405 W y 9,7 kWh por metro cuadrado de panel y día. Conectividad: la Tierra visible y el enlace posible son el 100 %; contacto 24 h al día, sin hueco. Si la antena del lander necesitara ver la Tierra 3° o 5° sobre el horizonte, el enlace bajaría al 84 % y al 74 %, con huecos de más de 53 y de más de 88 horas. Las estaciones, con su hora local: Madrid, Goldstone y Canberra se turnan.» |
 | **1:20–1:50** | «Capacidad del sitio» con las **coordenadas del TOP-1** (−89,5626°, 215,4724°E). Compara inicio **2026-12-12** con inicio **2026-12-06**. | «Mismo punto, otra fecha. El 12 de diciembre: enlace 100 %, APTO, score 97,4. El 6 de diciembre el Sol es igual de bueno, el 100 %, pero el enlace baja al 62 % y hay un hueco de 127 horas sin comunicaciones, hasta el 11 de diciembre. La puerta G7 falla y el veredicto es CONDICIONAL, score 73,9. Es la diferencia entre ver la Tierra y poder hablar con ella.» |
@@ -38,6 +39,26 @@ Distancias de Shackleton (`pipeline.snap_candidate`, `prefer="best"`): el punto 
 | **2:10–2:30** | **Horizonte y visibilidad** en **Mons Malapert**. Cursor en **2026-12-29 12:00 UTC** (periodo 2026-12-16 + 20 d). Enseña las tarjetas de cuenta atrás. | «El horizonte incluye terreno y curvatura. A mediodía del 29 de diciembre, la Tierra se pone en 16,3 horas y el Sol en 20,9: el *Earthset* llega unas 4,6 horas antes que el *sunset*.» |
 | **2:30–2:45** | **Línea temporal**, 30 d desde 2026-12-16 en Malapert. | «Si la misión durara 30 días, el Sol aparece solo el 48 % del tiempo: 14,4 días de Sol y después una noche de al menos 375 horas (la ventana la corta, por eso "al menos"). Veredicto CONDICIONAL: solo 1 de 17 fechas de inicio probadas pasa.» |
 | **2:45–3:00** | **Comparación de sitios** (Shackleton, de Gerlache, Malapert) y **Acerca de y límites**. Si hay tiempo, de Gerlache en «Capacidad del sitio». | «Los tres salen APTO en la fecha elegida, pero no hay ganador: de Gerlache, por ejemplo, pierde el enlace 16 horas antes de acabar la ventana. Enlace posible es geometría y cobertura de estación, no un presupuesto de radio; el DEM de 5 m tiene resolución efectiva de unos 30 m; no modelamos rocas, polvo ni eclipses.» + frase de cierre |
+
+## Tramo opcional: «Mapa del polo sur» (≈ 30 s, **reconfirmar antes de grabar**)
+
+Va **entre el Buscador y «Mejores puntos y fechas»** (tras 0:20). El guion llega a 3:00: para no pasarte, recorta «Score del sitio» (1:50–2:10) o la «Línea temporal» (2:30–2:45).
+
+| Acción en pantalla | Mensaje |
+|---|---|
+| **Mapa del polo sur**. Zoom 1: el polo entero. Escribe «Shackleton» en el buscador del mapa para centrarlo y acércate hasta ver también **Sverdrup**, **Faustini** y **de Gerlache**. Activa el contorno de las **PSR** y, si hay tiempo, la capa de **temperatura media**. | «Este es el polo sur completo con el modelo de 80 m. Shackleton y sus vecinos son cráteres en sombra permanente: el contorno son las PSR publicadas y la temperatura media del suelo va de 45 a 62 K.» |
+| Clic en el borde marcado como recorte de 5 m de Shackleton y «Evaluar este punto». | «Un clic elige el punto. Dentro de los recortes de 5 m el cálculo es el fino; fuera, el modelo de 80 m, que es aproximado y lo dice.» |
+
+Para enseñar el contraste de «fuera del recorte», clic en el **suelo** de Shackleton (modo de 80 m): Sol 0 % en 14 días, un veredicto provisional NO APTO y el aviso de «Relieve aproximado (80 m)» con su error medido. **Cifras reproducidas el 14/11/2026** con `lsi.pipeline` (patrón de `tests/test_e2e.py`: `P.build_context(raíz)`; `P.run_analysis(ctx, AnalysisRequest(lat, lon, "2026-12-12T00:00:00", "2026-12-26T00:00:00", snap_to_dem=False, mission_days=14))`), en el centro del gazetteer de cada rasgo, modo `FAR_FIELD`, observador a 2 m, sin panel; temperatura y PSR de `thermal_at` y `psr_distance_m`; iluminación publicada de `illum_ref_at`:
+
+| Rasgo (centro del gazetteer) | lat, lon E | Sol / Tierra / enlace (14 d desde 2026-12-12) | Borde PSR (− = dentro) | Temperatura media / máxima | Iluminación publicada |
+|---|---|---|---|---|---|
+| Shackleton | −89,670°, 129,780° | 0 % / 0 % / 0 % | −7860 m | 61,8 K / 95,5 K | 0,000 |
+| Sverdrup | −88,321°, 206,610° | 0 % / 26,7 % / 26,7 % | −5892 m | 53,0 K / 95,7 K | 0,000 |
+| Faustini | −87,183°, 84,310° | 0 % / 0 % / 0 % | −12 593 m | 46,8 K / 81,1 K | 0,000 |
+| de Gerlache | −88,485°, 271,660° | 0 % / 0 % / 0 % | −443 m | 45,6 K / 68,6 K | 0,000 |
+
+Los cuatro salen **NO APTO** (provisional: modo de 80 m, score parcial, nunca APTO). Para el contraste, Nobile (−85,275°, 53,27°E) da Sol 77 % y Amundsen (−84,44°, 83,07°E) 59,3 %, pero también en modo de 80 m. **Qué decir y qué no:** el centro de un cráter es su suelo, casi siempre PSR; el interés está en los bordes y las crestas, y ahí el modelo de 80 m es **optimista** (horizonte 0,68° RMS y hasta 5,8° de diferencia con el de 5 m, sesgo −0,25°; el veredicto cambia en el 10 % de los puntos). Una PSR publicada es sombra en **18,6 años** a nivel de superficie, no la sombra de los 14 días simulados. No digas que el mapa «elige» un sitio: elige un punto para evaluar.
 
 **Frase de cierre:**
 
@@ -144,6 +165,9 @@ Este factor es un promedio de la ventana con el Sol bajo; el de la pantalla «Po
 - **El vertical fijo depende del azimut elegido** (aquí 0°); el vertical con seguimiento es una cota ideal. Valores por encima del 100 % son posibles (perihelio, frío); no se recortan.
 - **Paneles:** cinco respaldados (tres GaAs 3J, 4J, ROSA; «respaldado» se refiere a la celda de referencia, no al conjunto) y tres experimentales sin datasheet (silicio, CIGS, perovskita-silicio). No presentes ROSA, 4J, CIGS ni perovskita como «usados en la Luna». W/m² y Wh/m² son de celda, sin empaquetado.
 - **Tres APTO no son tres empates.** No digas que uno «gana».
+- **Modo de 80 m (mapa del polo): aproximado y optimista en crestas.** Horizonte 0,68° RMS (hasta 5,8°), sesgo −0,25° (sobreestima la luz), veredicto distinto en el 10 % de los puntos; el score es parcial y nunca APTO. No lo mezcles con las cifras de 5 m.
+- **El mapa publicado no valida un TOP-1.** El contraste con la iluminación media publicada (PGDA 69) cuadra en el campo medio (24 puntos de rejilla: sesgo −0,01, RMS 0,09, 19 de 24 dentro de ±0,10; Site04 RMS 0,03), pero los TOP-1 difieren ±0,2-0,3 (altura del observador, 18,6 años frente a 1, sesgo de selección de máximos). No cites el 0,74-0,94 de `f_sol` de un TOP-1 como «lo que dice el mapa».
+- **Temperatura y PSR son contexto.** Diviner es del regolito y estacional (TOP-1: media 139-148 K, máxima 229-240 K); la `T_amb` de panel de 130 K (banda 40-250 K) es una **propuesta no aplicada**, con un factor de forma de 0,84 supuesto.
 - **Las fechas de diciembre de 2026** son lo que sale del precálculo, no una conclusión física explicada por LSI.
 - **«Mejor punto» es un punto elegido por optimización** en una malla de 250 m con resolución efectiva de ~30 m: confírmalo siempre en el modelo fino. El TOP-1 de Shackleton está fuera del borde del cráter.
 - **Horas locales:** cópialas de la tabla de la app o de `daily_contact_table`. No las derives restando husos a mano ni partiendo ventanas por día UTC.
@@ -157,10 +181,11 @@ Este factor es un promedio de la ventana con el Sol bajo; el de la pantalla «Po
 | «Enlace posible: no calculado» | La red está en «Solo geometría»: elige DSN, recepción, margen 0°. |
 | «Evaluar este punto y fecha» no cambia de página | Abre «Horizonte y visibilidad» o «Capacidad del sitio» desde el menú: el punto y la fecha ya están fijados. |
 | No hay red | Los cálculos son locales. Que la interfaz funcione sin conexión **no se ha comprobado**: pruébalo antes de grabar. |
-| Se rompe la app | Enseña las capturas de [`docs/capturas/`](capturas/) (31 JPG del QA visual del 14/11/2026, datos reales; **no incluyen** la pantalla «Capacidad del sitio») y, como último recurso, `python -m pytest -q tests/test_pipeline.py`. |
+| «Mapa del polo sur» no carga o faltan capas | Enseña [`docs/capturas/polo/`](capturas/polo/) (6 capturas: polo entero, zoom a Shackleton, capas PSR y temperatura, punto elegido, «Capacidad del sitio» en modo de 80 m) o vuelve a bajar las capas con `python scripts/fetch_thermal_psr.py`. |
+| Se rompe la app | Enseña las capturas de [`docs/capturas/`](capturas/) (31 JPG del QA visual del 14/11/2026 en la raíz, más `polo/`, `relieve/`, `mapas/`, `correcciones/` e `identidad/`; datos reales). Las 31 de la raíz **no incluyen** «Capacidad del sitio»; sí la de `correcciones/01-capacidad-sitio-80m.jpg` y `polo/05-capacidad-sitio-80m.jpg`, ambas en modo de 80 m. Las de `identidad/` muestran el aspecto LUNARIS de la rama `feat/lunaris-ui`. Como último recurso, `python -m pytest -q tests/test_pipeline.py`. |
 | Streamlit no arranca | `python -m pip install -r requirements.txt` y `python -m streamlit run app.py` desde la carpeta del proyecto. |
 
-El vídeo grabado sigue **pendiente**.
+El vídeo grabado sigue **pendiente**. Antes de grabarlo hay que decidir en qué rama (`main` o `feat/lunaris-ui`) y reconfirmar todas las cifras.
 
 ## Qué NO decir en la demo
 
@@ -169,6 +194,10 @@ Fuente: `docs/science/paneles-y-misiones.md` §6.
 - No digas «seguro», «aterrizable» ni «sitio recomendado»: di «zona candidata». «APTO» no certifica nada.
 - No des vatios sin área: el panel se da en % de su potencia nominal o en W/m².
 - No digas que el polvo está modelado ni prometas supervivencia nocturna.
+- No enseñes en `main` el visor 3D con foto, Sol y Tierra reales ni la marca LUNARIS: son de `feat/lunaris-ui`.
+- No presentes las coordenadas de las regiones Artemis III como puntos de aterrizaje ni como publicadas por NASA: son el centro aproximado de la huella del SDEM.
+- No digas que la foto del visor 3D (rama `feat/lunaris-ui`) muestra las sombras de la fecha: es un promedio de pasadas (LROC NAC) o de máxima iluminación (SDEM).
+- No presentes una PSR publicada como la sombra del periodo simulado.
 - No presentes la visibilidad de la Tierra ni el «enlace posible» como un enlace de comunicaciones garantizado: visibilidad geométrica no es potencia ni enlace garantizados.
 - No cites ventanas de estaciones que no salgan de la app («Canberra 09:34–22:11 AEDT» y «Goldstone 10:21–18:12 PST» no existen).
 - No uses la elevación solar de ±1,5° como cifra de un sitio.
