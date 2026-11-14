@@ -15,6 +15,8 @@ from lsi.contracts import STANDARD_WARNINGS_ES, VisibilityState, WarningCode, et
 
 BG = "#0b1020"
 PANEL = "#0f1733"
+ACCENT = "#3aa0ff"        # azul de panel de control (bordes luminosos, foco)
+CLEAR = "rgba(0,0,0,0)"
 GRID = "#26325a"
 TEXT = "#e8ecf5"          # contraste 15:1 sobre BG
 MUTED = "#a9b4d0"         # contraste ~8:1 sobre BG
@@ -56,7 +58,7 @@ def apply_theme(fig: go.Figure, title: str = "", height: int = 480, note: str | 
     """Aplica el tema espacial; ``note`` añade un aviso al pie de la figura."""
     fig.update_layout(
         title=dict(text=title, font=dict(size=18, color=TEXT)),
-        paper_bgcolor=BG, plot_bgcolor=PANEL, height=height,
+        paper_bgcolor=CLEAR, plot_bgcolor="rgba(15,23,51,0.55)", height=height,
         font=dict(color=TEXT, family="Segoe UI Variable Text, Segoe UI, Inter, system-ui, Arial, sans-serif", size=13),
         legend=dict(bgcolor="rgba(15,23,51,0.85)", bordercolor=GRID, borderwidth=1, font=dict(color=TEXT)),
         margin=dict(l=60, r=30, t=70, b=70 if note else 50),
@@ -82,3 +84,12 @@ def runs(mask: Sequence[bool]) -> List[Tuple[int, int]]:
 def periodic_interp(x: float, az_deg: np.ndarray, y: np.ndarray) -> float:
     """Interpolación circular de ``y`` (definida en ``az_deg``) en el azimut ``x``."""
     return float(np.interp(x % 360.0, np.asarray(az_deg), np.asarray(y), period=360.0))
+
+
+def compact(fig: go.Figure, height: int = 260, *, legend_below: bool = True) -> go.Figure:
+    """Versión de tarjeta de panel de control: sin título ni nota, márgenes mínimos y leyenda bajo la figura."""
+    fig.update_layout(title=dict(text=""), height=height, margin=dict(l=44, r=14, t=10, b=46 if legend_below else 30),
+                      legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5, bgcolor=CLEAR, borderwidth=0,
+                                  font=dict(color=TEXT, size=12)))
+    fig.layout.annotations = tuple(a for a in fig.layout.annotations if getattr(a, "xref", "") != "paper")   # quita la nota al pie
+    return fig

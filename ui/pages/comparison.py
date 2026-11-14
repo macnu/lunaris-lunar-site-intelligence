@@ -441,6 +441,65 @@ def score_section(ctx, pid: str, pool: Sequence[str], base, weighted, w_new: dic
     st.caption(STANDARD_WARNINGS_ES[WarningCode.SCORE_UNCALIBRATED])
 
 
+# ------------------------------------------------------------------------------------------------ panel de control
+def _bar(label: str, frac: Optional[float], tone: str) -> str:
+    """Medida con barra (texto + cifra + longitud: no depende del color). Sin dato → nada."""
+    if frac is None or not math.isfinite(frac):
+        return ""
+    f = min(max(frac, 0.0), 1.0)
+    return (f'<div class="lsi-mbar {tone}"><div class="k"><span>{C.esc(label)}</span><b>{C.esc(C.fmt_pct(f, 1))}</b></div>'
+            f'<div class="t" aria-hidden="true"><i style="width:{100 * f:.1f}%"></i></div></div>')
+
+
+def best_option(base: Mapping[str, AnalysisResult], pool: Sequence[str]) -> Optional[str]:
+    """Mejor opción CALCULADA por el motor: mayor veredicto por puertas y, a igualdad, mayor score. None si hay <2 comparables."""
+    cands = [n for n in pool if base[n].score is not None]
+    return max(cands, key=lambda n: (_VERDICT_RANK[base[n].score.verdict], base[n].score.score)) if len(cands) >= 2 else None
+
+
+def _thumb(res: AnalysisResult, key: str) -> None:
+    o = res.observer
+    try:
+        from lsi.visualization.relief_map import relief_map_figure
+        win = cache.get_mini_window(o.dem_key, float(o.x_m), float(o.y_m)) if is_dem(res) and o.dem_key else None
+        if win is not None:
+            fig = relief_map_figure(win, o, layer="elevation", compact=True, height=190)
+            st.plotly_chart(fig, width="stretch", key=key, config={"displayModeBar": False})
+            return
+        why = "Sin mapa de terreno (esfera lisa)"
+    except Exception as e:      # noqa: BLE001 - una miniatura rota no debe tirar la página
+        why = f"No se pudo dibujar la miniatura ({type(e).__name__})"
+    st.markdown(f'<div class="lsi-card-empty" style="min-height:8rem">{C.esc(why)}</div>', unsafe_allow_html=True)
+
+
+def comparison_panel(base: Mapping[str, AnalysisResult], pool: Sequence[str]) -> None:
+    """Comparativa de sitios con miniaturas de relieve, barras de Sol y enlace/Tierra y la tarjeta de «mejor opción» calculada."""
+    best = best_option(base, pool)
+    with st.container(key="lsi-cmp"):
+        cols = st.columns(len(base), gap="small")
+        for i, ((n, r), col) in enumerate(zip(base.items(), cols)):
+            m = r.window_metrics or r.metrics
+            has_link = m.link_fraction is not None
+            with col, st.container(border=True, key=f"lsi-card-cmp{i}"):
+                star = " ★" if n == best else ""
+                C.card_head("◍", n + star)
+                _thumb(r, f"cmp_thumb_{i}")
+                st.markdown(_bar("Luz solar", m.solar_fraction, "sun") + _bar("Enlace posible" if has_link else "Tierra a la vista",
+                                                                              m.link_fraction if has_link else m.earth_fraction, "earth"),
+                            unsafe_allow_html=True)
+                sc = r.score
+                if sc is not None:
+                    kind, icon = C._VERDICT_CHIP[sc.verdict]
+                    st.markdown(C.chips(C.chip(C.verdict_label(sc), kind, icon), C.chip(f"Nota {C.fmt_num(sc.score, 0)}/100", "info")),
+                                unsafe_allow_html=True)
+    if best is not None:
+        sc = base[best].score
+        head = f"Mejor opción: {best}" if sc.verdict in ("APTO", "CONDICIONAL") else f"Ninguno supera las comprobaciones; el que mejor sale: {best}"
+        st.markdown(f'<div class="lsi-best" role="note"><span class="ic" aria-hidden="true">★</span><div><b>{C.esc(head)}</b>'
+                    f'<span>{C.esc(C.verdict_sentence(sc))} Nota {C.esc(C.fmt_num(sc.score, 0))} de 100 con el perfil elegido; es una comparación, '
+                    'no una certificación.</span></div></div>', unsafe_allow_html=True)
+
+
 # ------------------------------------------------------------------------------------------------ página
 def _controls(ctx) -> tuple[list[Entry], list[tuple[str, str, str]], bool, str]:
     ss = st.session_state
@@ -525,6 +584,9 @@ def main() -> None:
     pool = [n for n, r in base.items() if is_dem(r)] if any(is_dem(r) for r in base.values()) and not all(is_dem(r) for r in base.values()) \
         else list(base)
     profile = profiles_from_config(ctx.cfg["score"])[pid]
+
+    st.subheader("Comparativa de emplazamientos")
+    comparison_panel(base, [n for n in pool if is_dem(base[n])])
 
     # --- Público: recomendación
     if S.is_public():

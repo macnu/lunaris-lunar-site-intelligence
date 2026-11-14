@@ -87,7 +87,7 @@ def test_malapert_core_blocks_notes_and_local_hours(page):
     contacts = next(t for t in tables(at) if "Hora local civil" in t.columns and "UTC" in t.columns)
     assert any(z in " ".join(contacts["Hora local civil"]) for z in LOCAL_ZONES)
     assert at.session_state[K.SITE_ID] == "site23"
-    assert len(at.get("plotly_chart")) == 3 and len(at.get("download_button")) == 2
+    assert len(at.get("plotly_chart")) == 9 and len(at.get("download_button")) == 3   # + panel de control (6 figuras) y descarga del informe
 
 
 @pytest.mark.parametrize("site", ["site04", "site11"])

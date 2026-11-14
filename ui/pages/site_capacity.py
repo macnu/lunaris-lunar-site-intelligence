@@ -21,7 +21,9 @@ from lsi.astronomy import ground_stations as gs
 from lsi.contracts import HorizonMode, MountingSpec, MountingType, PowerParams, StateKey as K, et_to_utc_datetime, \
     utc_datetime_to_et, utc_midnight_et
 from lsi.energy import panels as pn
-from lsi.visualization import capacity_plot, contact_plot
+from lsi.visualization import capacity_plot, contact_plot, donut_plot, theme
+from lsi.visualization.horizon_plot import horizon_cartesian
+from lsi.visualization.sky_plot import sky_polar
 from ui import cache, components as C, state as S
 
 MAX_CHART_DAYS = 31
@@ -179,6 +181,71 @@ def _mini_map(res) -> None:
     st.markdown(f'<div class="lsi-card-empty"><b>Mapa del entorno</b><span>{C.esc(why)}</span></div>', unsafe_allow_html=True)
 
 
+def _dashboard(res, m, link, t0: float, t1: float, scope_txt: str) -> None:
+    """Panel de control: anillos de Sol y Tierra/enlace con su curva diaria, cielo polar con la trayectoria del Sol y la Tierra sobre el
+    horizonte real, y el perfil del horizonte. TODO sale de ``res``; sin dato no hay tarjeta."""
+    days = [d for d in res.daily if d["end_et"] > t0 and d["start_et"] < t1 and d["end_et"] - d["start_et"] >= 86399.0] or         [d for d in res.daily if d["end_et"] > t0 and d["start_et"] < t1]
+    xs = [d["day_utc"][5:] for d in days]
+    has_link = link is not None and m.link_fraction is not None
+    ekey = "link_hours" if has_link and days and "link_hours" in days[0] else "earth_hours"
+    sun_fig = donut_plot.donut(m.solar_fraction, color=theme.SUN, on="Con Sol", off="Sin Sol", center=C.fmt_pct(m.solar_fraction, 1),
+                               sub="del tiempo con Sol")
+    ef = m.link_fraction if has_link else m.earth_fraction
+    earth_fig = donut_plot.donut(ef, color=theme.EARTH, on="Enlace posible" if has_link else "Tierra a la vista",
+                                 off="Sin enlace" if has_link else "Tierra oculta", center=C.fmt_pct(ef, 1),
+                                 sub="con enlace posible" if has_link else "con la Tierra a la vista")
+    with st.container(key="lsi-dash"):
+        c1, c2, c3 = st.columns(3, gap="small")
+        with c1, st.container(border=True, key="lsi-card-sun"):
+            C.card_head("☀", "Luz del Sol", f"Cifras sobre: {scope_txt}", "sun")
+            if sun_fig is not None:
+                C.accessible_chart(sun_fig, f"Anillo: el Sol se ve el {C.fmt_pct(m.solar_fraction, 1)} del tiempo ({scope_txt}).", key="_sc_donut_sun")
+            curve = donut_plot.area_curve(xs, [d["sun_hours"] for d in days], color=theme.SUN, name="Horas de Sol", unit="h/día", x_title="Día (mes-día, UTC)")
+            if curve is not None:
+                C.accessible_chart(curve, "Horas de Sol por día UTC a lo largo del periodo; el eje vertical va de 0 a 24 h.", key="_sc_curve_sun")
+            C.stat_rows([("Noche máxima", ("≥ " if m.max_darkness_truncated else "") + C.fmt_num(_hours(m.max_darkness_s), 1, "h")),
+                         ("Ventana solar más larga", C.fmt_duration(m.longest_sun_window_s, m.longest_sun_window_truncated))], "sun")
+        with c2, st.container(border=True, key="lsi-card-earth"):
+            C.card_head("◍", "Comunicación con la Tierra" if has_link else "Tierra a la vista",
+                        f"Cifras sobre: {scope_txt}", "earth")
+            if earth_fig is not None:
+                C.accessible_chart(earth_fig, f"Anillo: {'enlace posible' if has_link else 'Tierra sobre el horizonte'} el {C.fmt_pct(ef, 1)} del tiempo ({scope_txt}).",
+                                   key="_sc_donut_earth")
+            curve = donut_plot.area_curve(xs, [d.get(ekey, 0.0) for d in days], color=theme.EARTH,
+                                          name="Horas de enlace" if ekey == "link_hours" else "Horas con Tierra", unit="h/día", x_title="Día (mes-día, UTC)")
+            if curve is not None:
+                C.accessible_chart(curve, f"Horas {'con enlace posible' if ekey == 'link_hours' else 'con la Tierra a la vista'} por día UTC; eje de 0 a 24 h.",
+                                   key="_sc_curve_earth")
+            C.stat_rows([("Hueco máximo sin enlace", C.fmt_duration(m.max_link_gap_s, m.max_link_gap_truncated) if has_link else ""),
+                         ("Ventana de enlace más larga", C.fmt_duration(m.longest_link_window_s, m.longest_link_window_truncated) if has_link else ""),
+                         ], "earth")
+        with c3, st.container(border=True, key="lsi-card-sky"):
+            C.card_head("◎", "Cielo desde el punto", "Trayectoria del Sol y de la Tierra sobre el horizonte real")
+            C.accessible_chart(sky_polar(res.horizon, res.sky),
+                               "Vista polar del cielo, norte arriba: el terreno en gris tapa parte del cielo; el Sol (ámbar, círculos) y la Tierra (cian, rombos) "
+                               f"recorren el cielo durante el periodo; en línea continua cuando se ven y punteados cuando el relieve los tapa. "
+                               f"El Sol llega a {C.fmt_num(res.metrics.max_sun_elevation_deg, 1, '°')} de elevación y la Tierra a "
+                               f"{C.fmt_num(res.metrics.max_earth_elevation_deg, 1, '°')}.", key="_sc_sky")
+            C.stat_rows([("Elevación máxima del Sol", C.fmt_num(m.max_sun_elevation_deg, 1, "°")),
+                         ("Elevación máxima de la Tierra", C.fmt_num(m.max_earth_elevation_deg, 1, "°"))])
+    with st.container(key="lsi-dash2"):
+        d1, d2 = st.columns([2, 1], gap="small")
+        with d1, st.container(border=True, key="lsi-card-horizon"):
+            C.card_head("⛰", "Perfil del horizonte", "Elevación del terreno en cada dirección (0° = Norte)")
+            fig = theme.compact(horizon_cartesian(res.horizon, None, None, 0, show_band=False), 300)
+            C.accessible_chart(fig, "Perfil de horizonte: elevación del terreno (relleno gris) frente al azimut de 0 a 360°; las zonas rayadas son azimutes "
+                               "donde la cobertura del mapa es limitada (cota inferior).", key="_sc_horizon")
+        with d2, st.container(border=True, key="lsi-card-key"):
+            C.card_head("★", "Datos clave")
+            sc = res.score
+            rows = [("Elevación solar máxima", C.fmt_num(m.max_sun_elevation_deg, 1, "°")),
+                    ("Mejor fecha", C.fmt_utc_short(sc.best_start_utc) if sc is not None and sc.best_start_utc else ""),
+                    ("Nota (score)", f"{C.fmt_num(sc.score, 0)} / 100" if sc is not None else "")]
+            rows += [(k, v) for k, v, _ in C.slope_facts(res)[:1]]
+            C.stat_rows(rows)
+            st.caption("La nota resume, no decide: el veredicto lo dan las comprobaciones mínimas.")
+
+
 ctx = cache.get_context()
 ss = st.session_state
 req = S.request_or_stop()
@@ -264,6 +331,12 @@ with hero_col:
     st.markdown(f"**Mejor fecha:** {best_line}")
 with map_col:
     _mini_map(res)
+
+# --- (A2) panel de control + franja de informe
+_dashboard(res, m, link, t0, t1, scope_txt)
+if sc is not None:
+    C.mission_strip(res, key="cap")
+C.credit_strip()
 
 # --- (B) cabecera técnica + avisos (UN bloque plegable) + incertidumbre
 C.result_header(res)

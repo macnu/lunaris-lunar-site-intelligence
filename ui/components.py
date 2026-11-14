@@ -624,17 +624,68 @@ def download_comparison(rows: list[dict], *, key: str, file_name: str = "lsi_com
 
 
 # ------------------------------------------------------------------------------------------------ accesibilidad
-BRAND_SVG = ('<svg class="lsi-moon" viewBox="0 0 48 48" width="40" height="40" role="img" aria-label="Luna creciente">'
-             '<defs><linearGradient id="lsiMoon" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8f4ff"/>'
-             '<stop offset="1" stop-color="#5cc2f5"/></linearGradient></defs>'
-             '<path d="M30 5a19 19 0 1 0 0 38 15 15 0 1 1 0-38z" fill="url(#lsiMoon)"/></svg>')
+BRAND_SVG = ('<svg class="lsi-moon" viewBox="0 0 64 64" width="52" height="52" role="img" aria-label="Luna creciente">'
+             '<defs><linearGradient id="lsiMoon" x1="0.1" y1="0" x2="0.9" y2="1"><stop offset="0" stop-color="#f4faff"/>'
+             '<stop offset="0.55" stop-color="#9fd8ff"/><stop offset="1" stop-color="#3aa0ff"/></linearGradient>'
+             '<radialGradient id="lsiGlow" cx="0.4" cy="0.45" r="0.6"><stop offset="0" stop-color="#3aa0ff" stop-opacity=".35"/>'
+             '<stop offset="1" stop-color="#3aa0ff" stop-opacity="0"/></radialGradient></defs>'
+             '<circle cx="32" cy="32" r="30" fill="url(#lsiGlow)"/>'
+             '<path d="M40 6a26 26 0 1 0 0 52 21 21 0 1 1 0-52z" fill="url(#lsiMoon)"/>'
+             '<circle cx="50" cy="14" r="1.6" fill="#f4faff"/><circle cx="55" cy="26" r="1" fill="#9fd8ff"/></svg>')
+TAGLINE = "Elegir bien el lugar. Aterrizar con datos."
+DATA_CREDIT = "Datos: NASA LOLA · PGDA · USGS · JPL"
 
 
 def brand_header() -> None:
-    """Marca LUNARIS con una luna creciente propia en SVG (sin logotipos de terceros) y el crédito de datos en texto."""
+    """Marca LUNARIS con una luna creciente propia en SVG (sin logotipos de terceros: no se suplanta a ninguna organización) y
+    el crédito de los datos en texto."""
     st.markdown('<header class="lsi-brand">' + BRAND_SVG + '<div><div class="lsi-brand-name">LUNARIS</div>'
                 '<div class="lsi-brand-sub">Lunar Site Intelligence</div></div>'
-                '<div class="lsi-brand-credit">Datos: NASA LOLA / PGDA / USGS / JPL</div></header>', unsafe_allow_html=True)
+                f'<div class="lsi-brand-credit"><span class="lsi-tag">{esc(TAGLINE)}</span><span>{esc(DATA_CREDIT)}</span></div></header>',
+                unsafe_allow_html=True)
+
+
+# ------------------------------------------------------------------------------------------------ panel de control
+def card_head(icon: str, title: str, sub: str = "", tone: str = "") -> None:
+    """Cabecera de tarjeta del panel de control: icono + título (+ subtítulo llano). Va dentro de ``st.container(border=True)``."""
+    st.markdown(f'<div class="lsi-card-head {esc(tone)}"><span class="ic" aria-hidden="true">{esc(icon)}</span>'
+                f'<h3>{esc(title)}</h3></div>' + (f'<div class="lsi-card-sub">{esc(sub)}</div>' if sub else ""), unsafe_allow_html=True)
+
+
+def stat_rows(rows: Sequence[tuple[str, str]], tone: str = "") -> None:
+    """Lista de datos «etiqueta · valor» bajo una figura; el valor se muestra completo (nunca truncado)."""
+    items = "".join(f'<div><dt>{esc(k)}</dt><dd>{esc(v)}</dd></div>' for k, v in rows if v and v != "—")
+    if items:
+        st.markdown(f'<dl class="lsi-stats {esc(tone)}">{items}</dl>', unsafe_allow_html=True)
+
+
+def credit_strip() -> None:
+    st.markdown(f'<div class="lsi-credit"><span aria-hidden="true">ⓘ</span> {esc(DATA_CREDIT)} · geometría SPICE, relieve real (DEM) y '
+                'estimaciones con supuestos declarados.</div>', unsafe_allow_html=True)
+
+
+def mission_strip(res: AnalysisResult, *, key: str, link_label: str = "") -> None:
+    """Franja de informe de misión: veredicto por puertas (icono + texto), su frase y el botón de descarga. Todo sale del motor."""
+    sc = res.score
+    if sc is None:
+        return
+    kind, icon = _VERDICT_CHIP[sc.verdict]
+    m = res.window_metrics or res.metrics
+    stats = [("Sol", fmt_pct(m.solar_fraction, 1))]
+    stats.append(("Enlace" if m.link_fraction is not None else "Tierra a la vista", fmt_pct(m.link_fraction if m.link_fraction is not None else m.earth_fraction, 1)))
+    stats.append(("Noche máxima", ("≥ " if m.max_darkness_truncated else "") + fmt_num(m.max_darkness_s / 3600.0, 1, "h")))
+    if res.slope_r100 is not None and res.slope_r100.p90_deg is not None and math.isfinite(res.slope_r100.p90_deg):
+        stats.append(("Pendiente (p90)", fmt_num(res.slope_r100.p90_deg, 1, "°")))
+    with st.container(border=True, key=f"lsi-mission-{key}"):
+        c1, c2, c3 = st.columns([5, 4, 2], vertical_alignment="center")
+        c1.markdown(f'<div class="lsi-mission-head"><div class="lsi-kicker">Informe de misión</div>'
+                    f'<div class="lsi-mission-title">{esc(place_name(res.observer.label))} {chip(verdict_label(sc), kind, icon)}</div>'
+                    f'<p class="lsi-mission-read">{esc(verdict_sentence(sc))}</p></div>', unsafe_allow_html=True)
+        c2.markdown('<dl class="lsi-stats row">' + "".join(f'<div><dt>{esc(k)}</dt><dd>{esc(v)}</dd></div>' for k, v in stats) + "</dl>",
+                    unsafe_allow_html=True)
+        c3.download_button("Descargar informe", data=lambda: result_json_bytes(res), file_name=f"lsi_informe_{_slug(res.observer.label)}_{res.request.start_utc[:10]}.json",
+                           mime="application/json", on_click="ignore", key=f"lsi_dl_{key}", icon=":material/download:", width="stretch",
+                           help="Resultado completo (JSON validado) con metadatos y avisos de alcance. La descarga no recalcula nada.")
 
 
 @lru_cache(maxsize=1)

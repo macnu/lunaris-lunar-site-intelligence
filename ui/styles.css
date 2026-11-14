@@ -2,7 +2,7 @@
    Acentos con significado: ámbar solar = Sol/energía · cian = Tierra/enlace · verde = APTO · naranja = CONDICIONAL · rojo = NO APTO.
    Ningún estado depende solo del color: los chips llevan icono y texto. Fuentes del sistema (sin red). */
 :root {
-  --bg0: #050813; --bg1: #0b1020; --bg2: #101933;
+  --bg0: #02050d; --bg1: #07102a; --bg2: #101933; --accent: #3aa0ff;
   --card: rgba(18, 26, 51, .82); --card-hi: rgba(27, 38, 72, .92);
   --line: #26325a; --line-hi: #3a4a82;
   --text: #eef2fb; --muted: #b3bdd8; --faint: #8f9bbd;
@@ -16,9 +16,14 @@
 /* ---------- lienzo: degradado sutil con «horizonte» de luz fría ---------- */
 .stApp {
   background:
-    radial-gradient(1100px 520px at 78% -8%, rgba(92, 194, 245, .10), transparent 62%),
-    radial-gradient(900px 480px at 8% 0%, rgba(255, 194, 71, .06), transparent 60%),
-    linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 100%);
+    radial-gradient(1.2px 1.2px at 12% 18%, rgba(255, 255, 255, .55), transparent 60%),
+    radial-gradient(1px 1px at 33% 7%, rgba(180, 215, 255, .5), transparent 60%),
+    radial-gradient(1.4px 1.4px at 61% 22%, rgba(255, 255, 255, .45), transparent 60%),
+    radial-gradient(1px 1px at 84% 11%, rgba(180, 215, 255, .5), transparent 60%),
+    radial-gradient(1px 1px at 92% 38%, rgba(255, 255, 255, .35), transparent 60%),
+    radial-gradient(1200px 560px at 82% -10%, rgba(58, 160, 255, .16), transparent 62%),
+    radial-gradient(900px 480px at 4% 0%, rgba(255, 194, 71, .05), transparent 60%),
+    linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 70%);
   background-attachment: fixed;
   font-family: var(--font);
 }
@@ -161,11 +166,70 @@ h3 { font-size: 1.05rem !important; font-weight: 650 !important; }
 
 .lsi-kpi.txt .lsi-kpi-value { font-size: 1.25rem; line-height: 1.25; font-weight: 650; }
 
-/* marca LUNARIS */
-.lsi-brand { display: flex; align-items: center; gap: .8rem; padding: .2rem 0 .6rem; border-bottom: 1px solid var(--line); margin-bottom: .6rem; }
-.lsi-moon { flex: none; filter: drop-shadow(0 0 8px rgba(92, 194, 245, .55)); }
-.lsi-brand-name { font-size: 1.5rem; font-weight: 750; letter-spacing: .28em; line-height: 1; color: var(--text); }
-.lsi-brand-sub { font-size: .8rem; letter-spacing: .16em; color: var(--muted); text-transform: uppercase; }
-.lsi-brand-credit { margin-left: auto; font-size: .74rem; color: var(--faint); text-align: right; }
-@media (max-width: 700px) { .lsi-brand-credit { display: none; } }
-header[data-testid="stHeader"] { background: rgba(8, 12, 28, .85); backdrop-filter: blur(6px); }
+/* ---------- marca LUNARIS ---------- */
+.lsi-brand { display: flex; align-items: center; gap: .85rem; padding: .1rem 0 .7rem; margin-bottom: .5rem;
+  border-bottom: 1px solid transparent; border-image: linear-gradient(90deg, rgba(58, 160, 255, .6), rgba(58, 160, 255, .05)) 1; }
+.lsi-moon { flex: none; filter: drop-shadow(0 0 10px rgba(58, 160, 255, .6)); }
+.lsi-brand-name { font-size: clamp(1.45rem, 1.6vw + 1rem, 2.1rem); font-weight: 300; letter-spacing: .42em; line-height: 1; color: var(--text);
+  text-shadow: 0 0 18px rgba(92, 194, 245, .35); }
+.lsi-brand-sub { margin-top: .25rem; font-size: .8rem; letter-spacing: .2em; color: var(--muted); text-transform: uppercase; }
+.lsi-brand-credit { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: .15rem; font-size: .76rem; color: var(--muted); text-align: right; }
+.lsi-tag { color: var(--text); font-weight: 600; font-size: .82rem; }
+@media (max-width: 700px) { .lsi-brand-credit { display: none; } .lsi-brand-name { letter-spacing: .3em; } }
+header[data-testid="stHeader"] { background: rgba(3, 7, 18, .82); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(58, 160, 255, .18); }
+
+/* ---------- tarjetas de panel de control: borde luminoso fino ---------- */
+[data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"] > .stElementContainer .lsi-card-head),
+[class*="st-key-lsi-card-"], [class*="st-key-lsi-mission-"] {
+  border: 1px solid rgba(58, 160, 255, .34) !important; border-radius: 16px !important;
+  background: linear-gradient(165deg, rgba(16, 28, 62, .78), rgba(6, 12, 30, .86)) !important;
+  box-shadow: 0 0 0 1px rgba(58, 160, 255, .06), 0 0 22px rgba(58, 160, 255, .10), inset 0 1px 0 rgba(255, 255, 255, .05); }
+.st-key-lsi-card-sun { border-color: rgba(255, 194, 71, .42) !important; box-shadow: 0 0 22px rgba(255, 194, 71, .10) !important; }
+.st-key-lsi-card-earth { border-color: rgba(92, 194, 245, .5) !important; box-shadow: 0 0 22px rgba(92, 194, 245, .12) !important; }
+[class*="st-key-lsi-card-"] [data-testid="stPlotlyChart"], [class*="st-key-lsi-mission-"] [data-testid="stPlotlyChart"] {
+  border: 0; background: transparent; border-radius: 0; }
+.st-key-lsi-dash [data-testid="stHorizontalBlock"], .st-key-lsi-dash2 [data-testid="stHorizontalBlock"], .st-key-lsi-cmp [data-testid="stHorizontalBlock"] { flex-wrap: wrap; }
+.st-key-lsi-dash [data-testid="stColumn"], .st-key-lsi-cmp [data-testid="stColumn"] { min-width: min(100%, 18rem); }
+.st-key-lsi-dash2 [data-testid="stColumn"] { min-width: min(100%, 17rem); }
+.lsi-card-head { display: flex; align-items: center; gap: .55rem; margin: 0 0 .1rem; }
+.lsi-card-head .ic { font-size: 1.25rem; line-height: 1; color: var(--accent); }
+.lsi-card-head.sun .ic { color: var(--sun); } .lsi-card-head.earth .ic { color: var(--earth); }
+.lsi-card-head h3 { margin: 0 !important; padding: 0 !important; font-size: 1.08rem !important; color: var(--text); }
+.lsi-card-sub { font-size: .8rem; color: var(--muted); margin: 0 0 .25rem; line-height: 1.35; }
+.lsi-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); gap: .45rem .9rem; margin: .35rem 0 0; padding: .55rem 0 0;
+  border-top: 1px solid var(--line); }
+.lsi-stats > div { min-width: 0; }
+.lsi-stats dt { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin: 0; overflow-wrap: anywhere; }
+.lsi-stats dd { margin: 0; font-size: 1.12rem; font-weight: 650; color: var(--text); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.lsi-stats.sun dd { color: var(--sun); } .lsi-stats.earth dd { color: var(--earth); }
+.lsi-stats.row { border-top: 0; padding-top: 0; margin: 0; }
+.lsi-credit { margin: .6rem 0 .2rem; padding: .5rem .9rem; border-radius: 12px; border: 1px solid var(--line); color: var(--muted); font-size: .8rem;
+  background: rgba(6, 12, 30, .6); }
+[class*="st-key-lsi-card-"] [data-testid="stCaptionContainer"] { font-size: .74rem; }
+
+/* franja de informe de misión */
+.lsi-kicker { font-size: .72rem; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+.lsi-mission-title { font-size: clamp(1.15rem, 1vw + .9rem, 1.55rem); font-weight: 700; color: var(--text); display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .7rem; overflow-wrap: anywhere; }
+.lsi-mission-read { margin: .3rem 0 0; color: var(--muted); font-size: .92rem; line-height: 1.45; }
+[class*="st-key-lsi-mission-"] [data-testid="stHorizontalBlock"] { flex-wrap: wrap; }
+[class*="st-key-lsi-mission-"] [data-testid="stColumn"] { min-width: min(100%, 14rem); }
+.stDownloadButton > button { border: 1px solid rgba(58, 160, 255, .6); background: linear-gradient(180deg, rgba(58, 160, 255, .22), rgba(58, 160, 255, .08)); color: var(--text); font-weight: 600; }
+
+/* ---------- navegación superior: píldoras luminosas ---------- */
+[data-testid="stHeader"] a[data-testid="stTopNavLink"], [data-testid="stHeader"] [data-testid="stTopNavLink"] { border-radius: 10px; font-weight: 600; }
+[data-testid="stHeader"] [data-testid="stTopNavLink"][aria-current="page"], [data-testid="stHeader"] a[aria-current="page"] {
+  background: linear-gradient(180deg, rgba(58, 160, 255, .28), rgba(58, 160, 255, .10)) !important; border: 1px solid rgba(58, 160, 255, .65) !important;
+  box-shadow: 0 0 14px rgba(58, 160, 255, .35); color: var(--text) !important; }
+
+/* comparativa: barras con texto y «mejor opción» */
+.lsi-mbar { margin: .45rem 0 .1rem; }
+.lsi-mbar .k { display: flex; justify-content: space-between; gap: .5rem; font-size: .8rem; color: var(--muted); }
+.lsi-mbar .k b { font-size: 1.15rem; color: var(--text); font-variant-numeric: tabular-nums; }
+.lsi-mbar .t { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.lsi-mbar .t i { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
+.lsi-mbar.sun .t i { background: var(--sun); } .lsi-mbar.earth .t i { background: var(--earth); }
+.lsi-mbar.sun .k b { color: var(--sun); } .lsi-mbar.earth .k b { color: var(--earth); }
+.lsi-best { display: flex; gap: .8rem; align-items: center; margin: .6rem 0 .4rem; padding: .7rem 1rem; border-radius: 14px;
+  border: 1px solid rgba(255, 194, 71, .65); background: linear-gradient(90deg, rgba(255, 194, 71, .14), rgba(255, 194, 71, .04)); box-shadow: 0 0 20px rgba(255, 194, 71, .10); }
+.lsi-best .ic { font-size: 1.6rem; color: var(--sun); }
+.lsi-best b { display: block; color: var(--text); font-size: 1.05rem; } .lsi-best span:not(.ic) { color: var(--muted); font-size: .88rem; line-height: 1.4; }

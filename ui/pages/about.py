@@ -1,6 +1,7 @@
 """Acerca de / Metodología y límites. No calcula física: cifras de ``config/`` y del código; lo no verificado lleva «a verificar»."""
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 import sys
@@ -43,6 +44,14 @@ def _gazetteer_rows() -> int | None:
 st.title("Acerca de: metodología y límites")
 st.caption("Lunar Site Intelligence (LSI) · reto NASA Space Apps 2026, *Lunar Landing Site Navigator*")
 C.warnings_band()
+
+# franja de informe de misión del lugar elegido (cifras del motor; la misma petición que «Capacidad del sitio», así que sale de la caché)
+_req = state.current_request()
+if _req is not None:
+    _res, _err = cache.try_analysis(dataclasses.replace(_req, with_uncertainty=True))
+    if _res is not None:
+        C.mission_strip(_res, key="about")
+C.credit_strip()
 
 # ---------------------------------------------------------------------------------------------- 1. qué es
 st.header("1. Qué es LSI y a qué pregunta responde")
