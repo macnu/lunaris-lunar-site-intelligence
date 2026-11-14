@@ -11,6 +11,7 @@ PAGE_SPECS: tuple[tuple[str, str, str], ...] = (
     ("search", "Buscador", ":material/search:"),
     ("site_capacity", "Capacidad del sitio", ":material/satellite_alt:"),
     ("explorer", "Explorador 3D", ":material/terrain:"),
+    ("polar_map", "Mapa del polo sur", ":material/public:"),
     ("best_spots", "Mejores puntos y fechas", ":material/event_available:"),
     ("horizon_visibility", "Horizonte y visibilidad", ":material/wb_twilight:"),
     ("timeline", "Línea temporal", ":material/timeline:"),

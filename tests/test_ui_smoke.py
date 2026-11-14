@@ -1,4 +1,4 @@
-"""Humo de la UI (§12.3 punto 4): ``streamlit.testing.v1.AppTest`` recorre las 10 páginas sin ``exception`` en los 3 modos."""
+"""Humo de la UI (§12.3 punto 4): ``streamlit.testing.v1.AppTest`` recorre las 11 páginas sin ``exception`` en los 3 modos."""
 import shutil
 from pathlib import Path
 
@@ -17,8 +17,8 @@ def run_app() -> AppTest:
     return AppTest.from_file(str(ROOT / "app.py"), default_timeout=180).run()
 
 
-def test_ten_pages_declared():
-    assert PAGES == ["search", "site_capacity", "explorer", "best_spots", "horizon_visibility", "timeline", "comparison", "power_panels",
+def test_eleven_pages_declared():
+    assert PAGES == ["search", "site_capacity", "explorer", "polar_map", "best_spots", "horizon_visibility", "timeline", "comparison", "power_panels",
                      "site_score", "about"]
     assert all((ROOT / "ui" / "pages" / f"{n}.py").is_file() for n in PAGES)
 
