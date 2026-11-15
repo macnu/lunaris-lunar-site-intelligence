@@ -237,3 +237,9 @@ Referencias científicas (las marcadas «leída» se leyeron en fuente durante l
 Cómo citar: «Lunar Site Intelligence (LSI), 2026. Equipo LSI, NASA Space Apps Challenge 2026, *Lunar Landing Site Navigator*.»
 
 **Licencia del código: Apache-2.0** (fichero `LICENSE`). Elegida por indicación del dueño: la que fije el hackatón. Los términos de Space Apps de 2026 no pudieron leerse de la fuente primaria (fallo de certificado TLS del sitio); revisa que siguen aceptando una licencia OSI. Los datos NASA/USGS/SDEM mantienen sus licencias y citas.
+
+## Use of AI tools / Declaración de uso de IA
+
+**EN.** The code, tests and documentation of this repository were written with the assistance of **Claude Code (Anthropic, Claude Sonnet 5.5)** under the team's direction, and the demo narration uses a Windows text-to-speech voice. All scientific numbers come from NASA data and the code in this repository, not from a language model. No NASA logos, flags or mission identifiers are used. Screenshots in the presentation are captures of the real application; no image is AI-generated.
+
+**ES.** El código, las pruebas y la documentación se escribieron con ayuda de **Claude Code (Anthropic, Claude Sonnet 5.5)**, dirigido por el equipo; la narración de la demo usa una voz de síntesis de Windows. Las cifras científicas salen de los datos de NASA y del código, no de un modelo de lenguaje. No se usa ningún logotipo, bandera ni identificador de misión de NASA. Las capturas de la presentación son de la aplicación real; ninguna imagen está generada por IA.
