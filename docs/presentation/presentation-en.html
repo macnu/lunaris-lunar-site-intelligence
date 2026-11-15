@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>LUNARIS — Lunar Site Intelligence</title>
+<style>
+@page{size:1600px 900px;margin:0}
+:root{--bg:#050b1a;--panel:#0d1830;--line:#22335c;--tx:#eaf0ff;--mut:#93a4c9;--amb:#ffb43a;--grn:#37d98b;--cy:#5cc8ff}
+*{box-sizing:border-box;margin:0}html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:"Segoe UI",Arial,sans-serif}
+.s{width:1600px;height:899px;padding:70px 90px;position:relative;overflow:hidden;page-break-after:always;
+ background:radial-gradient(1200px 700px at 85% 0%,#14264f 0%,transparent 60%),radial-gradient(800px 500px at 0% 100%,#0f1f3f 0%,transparent 60%),var(--bg)}
+.s:last-child{page-break-after:auto}
+.k{font-size:20px;letter-spacing:.28em;color:var(--cy);text-transform:uppercase;font-weight:600}
+h1{font-size:104px;letter-spacing:.14em;font-weight:300;margin:18px 0 10px}
+h2{font-size:62px;line-height:1.1;font-weight:700;margin:14px 0 30px;max-width:1300px}
+p,li{font-size:30px;line-height:1.4;color:#cdd8f2}
+.mut{color:var(--mut)}
+.big{font-size:44px;line-height:1.3;color:var(--tx);max-width:1250px}
+.amb{color:var(--amb)}.grn{color:var(--grn)}.cy{color:var(--cy)}
+.foot{position:absolute;left:90px;right:90px;bottom:34px;display:flex;justify-content:space-between;font-size:18px;color:var(--mut)}
+.row{display:flex;gap:40px;align-items:flex-start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 30px}
+.num{font-size:92px;font-weight:700;line-height:1}
+.lab{font-size:22px;color:var(--mut);margin-top:8px}
+img{border-radius:14px;border:1px solid var(--line);display:block}
+.cap{font-size:18px;color:var(--mut);margin-top:10px}
+ul{padding-left:34px}li{margin:10px 0}
+.pill{display:inline-block;padding:6px 18px;border-radius:999px;border:1px solid var(--line);font-size:22px;margin:6px 10px 6px 0;color:var(--tx)}
+.step{flex:1;text-align:center}
+.arrow{align-self:center;font-size:44px;color:var(--cy)}
+</style></head><body>
+
+<section class="s">
+ <div class="k">NASA Space Apps 2026 · Lunar Landing Site Navigator</div>
+ <h1>LUNARIS</h1>
+ <div style="font-size:34px;letter-spacing:.3em;color:var(--mut)">LUNAR SITE INTELLIGENCE</div>
+ <p class="big" style="margin-top:120px">For any spot near the lunar south pole and any date:<br>
+  <span class="amb">does it see the Sun</span>, <span class="cy">does it see the Earth</span>,<br>and <span class="grn">could it actually talk to it?</span></p>
+ <div class="foot"><span>Real NASA data: LOLA · SPICE · Deep Space Network</span><span>Open source · Apache-2.0</span></div>
+</section>
+
+<section class="s">
+ <div class="k">What makes it different</div>
+ <h2 style="font-size:54px;margin-bottom:18px">Same place. Same sunlight. <span class="amb">Different start date.</span></h2>
+ <div class="row">
+  <div style="flex:1">
+   <img src="s_apto.png" width="560"><div class="cap">Shackleton, start 12 Dec 2026 — link 100 %, no gap</div>
+   <div class="num grn" style="margin-top:10px;font-size:60px">APTO · 97.4</div>
+  </div>
+  <div style="flex:1">
+   <img src="s_cond.png" width="560"><div class="cap">Same spot, start 6 Dec 2026 — link 62 %, 127 h blackout</div>
+   <div class="num amb" style="margin-top:10px;font-size:60px">CONDICIONAL · 73.9</div>
+  </div>
+ </div>
+ <p style="margin-top:14px;font-size:26px">The Sun is 100 % in both. A mission needs the Earth link to <b>stay up</b>, not just to exist — on 6 Dec it fails the continuity gate.</p>
+ <div class="foot"><span>Screens from the real app (interface in Spanish; results are computed, not mocked)</span><span>2 / 7</span></div>
+</section>
+
+<section class="s">
+ <div class="k">Timing is the finding</div>
+ <h2>Mons Malapert scores <span class="grn">98.4</span> — but only <span class="amb">5 of 353</span> start dates work.</h2>
+ <p style="max-width:1250px">Ranking spots by average light hides the real constraint. LUNARIS evaluates every start date across the year and tells the planner <b>when</b> a site is usable, not just <b>where</b>.</p>
+ <div class="row" style="margin-top:50px">
+  <div class="card" style="flex:1"><div class="num grn">98.4</div><div class="lab">best-date score, Malapert</div></div>
+  <div class="card" style="flex:1"><div class="num amb">5 / 353</div><div class="lab">start dates that pass all gates</div></div>
+  <div class="card" style="flex:1"><div class="num cy">127 h</div><div class="lab">blackout hidden inside a 100 %-sun site</div></div>
+ </div>
+ <div class="foot"><span>Computed by the real pipeline; figures read from the screen by the recording script</span><span>3 / 7</span></div>
+</section>
+
+<section class="s">
+ <div class="k">How it works</div>
+ <h2>Real data in, a defensible verdict out.</h2>
+ <div class="row" style="margin-top:30px">
+  <div class="card step"><div class="cy" style="font-size:26px;font-weight:600">DATA</div><p style="font-size:26px;margin-top:10px">LOLA DEM 5 m and 80 m · SPICE ephemerides · DSN station geometry · LROC imagery</p></div>
+  <div class="arrow">→</div>
+  <div class="card step"><div class="cy" style="font-size:26px;font-weight:600">PHYSICS</div><p style="font-size:26px;margin-top:10px">Horizon and shadow per date · panel capacity · Earth line of sight per station</p></div>
+  <div class="arrow">→</div>
+  <div class="card step"><div class="cy" style="font-size:26px;font-weight:600">GATES G0–G7</div><p style="font-size:26px;margin-top:10px">Slope, illumination and link continuity (G7: longest gap) → APTO / CONDICIONAL / NO APTO</p></div>
+ </div>
+ <ul style="margin-top:50px">
+  <li>Search any crater or type coordinates; suitability score with an uncertainty range.</li>
+  <li>Best start date proposed automatically for the mission window.</li>
+  <li>Bad results are published on purpose — NO APTO is a result, not an error.</li>
+ </ul>
+ <div class="foot"><span>Python · Streamlit · SPICE · three.js</span><span>4 / 7</span></div>
+</section>
+
+<section class="s">
+ <div class="k">The experience</div>
+ <h2>See the site as a lander would.</h2>
+ <div class="row">
+  <div><img src="s_3d.png" width="780"><div class="cap">3D viewer: real LROC photo on LOLA terrain, true Sun and Earth positions</div></div>
+  <div style="flex:1">
+   <ul style="margin-top:0">
+    <li><b>Oblique and orbital views</b> of the exact point.</li>
+    <li><b>Observer's-eye view</b> at 2 m: where the Sun and Earth sit on the horizon.</li>
+    <li><b>Says what it cannot show:</b> far terrain is 80 m resolution, micro-relief is procedural.</li>
+    <li>Maps, comparison between candidates and a report page.</li>
+   </ul>
+  </div>
+ </div>
+ <div class="foot"><span>Interface currently in Spanish</span><span>5 / 7</span></div>
+</section>
+
+<section class="s">
+ <div class="k">Scientific honesty</div>
+ <h2>We label what we have <span class="amb">not</span> proven.</h2>
+ <div class="row">
+  <div class="card" style="flex:1"><p><b class="amb">Candidates, not certified sites.</b><br><span class="mut">Top-ranked spots do not match the published illumination map to within ±0.2–0.3. The headline says so on screen.</span></p></div>
+  <div class="card" style="flex:1"><p><b class="amb">Declared limits.</b><br><span class="mut">Coarse far-field mode error is shown; thermal range 40–250 K for panels; 3D is not photorealistic.</span></p></div>
+  <div class="card" style="flex:1"><p><b class="grn">997 automated tests.</b><br><span class="mut">Independent check of Sun/Earth geometry against JPL Horizons.</span></p></div>
+ </div>
+ <p style="margin-top:50px;max-width:1250px">A tool that mission planners can trust is one that tells them where it is unsure.</p>
+ <div class="foot"><span>docs/limitaciones.md · docs/metodologia.md</span><span>6 / 7</span></div>
+</section>
+
+<section class="s">
+ <div class="k">Open, reproducible, transparent</div>
+ <h2>Try it. Check it. Build on it.</h2>
+ <div class="row">
+  <div style="flex:1"><ul>
+   <li><b>License:</b> Apache-2.0 (OSI). Data keep their own licences.</li>
+   <li><b>Run it:</b> Python 3.11 · <code>pip install -r requirements.txt</code> · <code>streamlit run app.py</code></li>
+   <li><b>AI disclosure:</b> built with Claude Code (Anthropic, Claude Sonnet 5.5) under the team's direction; scientific numbers come from NASA data and code, not the model.</li>
+  </ul></div>
+  <div style="flex:1" class="card"><div class="cy" style="font-size:22px;font-weight:600;letter-spacing:.1em">SOURCES</div>
+   <p style="font-size:23px;margin-top:10px">NASA LOLA (PGDA products 78 &amp; 90) · NAIF SPICE · JPL Horizons · DSN 810-005 · USGS Gazetteer of Planetary Nomenclature · LROC NAC &amp; SDEM · Diviner · three.js · Streamlit</p></div>
+ </div>
+ <p style="margin-top:50px;font-size:34px;color:var(--tx)"><span class="amb">LUNARIS</span> — choose the right place, <span class="cy">at the right time</span>, with data.</p>
+ <div class="foot"><span>No NASA logo is used</span><span>7 / 7</span></div>
+</section>
+</body></html>

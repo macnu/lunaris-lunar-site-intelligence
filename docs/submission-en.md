@@ -23,6 +23,9 @@ they do not match the published illumination map to within ±0.2–0.3.
 `demo_out/lsi-demo-en-30s.mp4` (28.6 s, English voice-over; the on-screen interface is in Spanish). Not yet uploaded:
 the owner must host it (YouTube or Google Drive) with a public link and paste it in the Project tab.
 
+Slide deck (7 slides, English): `docs/presentation/lunaris-presentation-en.pdf` (source `docs/presentation/presentation-en.html`,
+built with `render.py`). The portal accepts a video ≤ 30 s **or** ≤ 7 slides; upload whichever fits the 2026 guide.
+
 ## How to try it
 
 Python 3.11. `pip install -r requirements.txt`, download data with the scripts in `scripts/`, then
