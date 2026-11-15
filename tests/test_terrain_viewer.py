@@ -79,7 +79,7 @@ def test_payload_con_contexto_y_parche_acotado():
     assert s["_bytes_crop"] < TV.MAX_PAYLOAD_BYTES and 0 < s["_bytes_extra"] < 1_500_000
     assert s["_bytes"] == s["_bytes_crop"] + s["_bytes_extra"]
     assert "permanentemente sombreada" in s["photo"]["notice"] and "ShadowCam no está integrada" in s["photo"]["notice"]
-    assert s["ctx"]["n"] <= 160 and s["patch"]["step_m"] == 2.5
+    assert s["ctx"]["n"] <= 448 and s["patch"]["step_m"] == 2.5
     html = TV.viewer_html(s)
     assert "http" not in TV._BODY and not re.search(r"""(src|href)\s*=\s*["']?(https?:)?//""", html)
     assert "Microrrelieve" in TV._BODY and "microrrelieve procedural: no es dato" in TV._assets()[3]

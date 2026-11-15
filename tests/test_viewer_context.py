@@ -26,12 +26,12 @@ def _ctx(crop=None, el=1.0):
 def test_contexto_finito_acotado_y_determinista():
     a, _ = _ctx()
     b, _ = _ctx()
-    assert a["heights"].shape == (VC.CTX_N, VC.CTX_N) and VC.CTX_N <= 160
+    assert a["heights"].shape == (VC.CTX_N, VC.CTX_N) and VC.CTX_N <= 448
     assert np.isfinite(a["heights"]).all() and np.isfinite(a["lit"]).all()
     assert 0.0 <= a["lit"].min() and a["lit"].max() <= 1.0
     assert np.array_equal(a["lit"], b["lit"]) and np.array_equal(a["heights"], b["heights"])       # sombra determinista
     n = len(json.dumps(VC.context_payload(a)))
-    assert n < VC.MAX_EXTRA_BYTES * 0.6                                                              # contexto ≪ 1,5 MB
+    assert n < VC.MAX_EXTRA_BYTES * 0.6                                                              # contexto < 1,5 MB
 
 
 @needs_far

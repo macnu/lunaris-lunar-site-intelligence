@@ -7,7 +7,7 @@ Dos capas:
   three.js r147 y OrbitControls vendorizados (``ui/static/vendor``, ver su MANIFEST.json), CSS y JS en línea: cero peticiones de red.
 * ``render_terrain_viewer``: pinta ese HTML con Streamlit.
 
-Además (``lsi.data.viewer_context``): un TERRENO DE CONTEXTO (DEM LOLA de 80 m, ±20-25 km, ≤ 160 × 160 vértices, sin foto, con sus propias
+Además (``lsi.data.viewer_context``): un TERRENO DE CONTEXTO (DEM LOLA de 80 m, ±20-25 km, ≤ 448 × 448 vértices, sin foto, con sus propias
 sombras y degradado a negro en el borde) y un PARCHE FINO de ≈ 700 m alrededor del observador (alturas nativas de 5 m interpoladas a 2,5 m).
 El microrrelieve de ese parche es solo sombreado procedural en el shader, rotulado «no es dato».
 

@@ -18,11 +18,11 @@ from typing import Optional
 import numpy as np
 from scipy import ndimage as ndi
 
-CTX_N = 160                    # vértices por lado del contexto (≤ 160 × 160 = 25 600)
+CTX_N = 448                    # vértices por lado del contexto (448 × 448 ≈ 200 000; ≈ 90 m/celda a ±20 km, cerca de los 80 m del modelo)
 CTX_HALF_MIN, CTX_HALF_MAX = 20000.0, 25000.0
 FEATHER_M = 2000.0             # mezcla de alturas fuera del recorte
 PATCH_HALF_M, PATCH_PX_M = 350.0, 2.5
-MAX_EXTRA_BYTES = 1_500_000    # cota del JSON del contexto + el parche
+MAX_EXTRA_BYTES = 2_500_000    # cota del JSON del contexto + el parche
 FAR_PX_M = 80.0
 
 
