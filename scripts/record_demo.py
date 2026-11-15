@@ -32,7 +32,7 @@ SCENES = [
            "Pero mira el recuadro: solo {fechas} fechas de inicio probadas sirven, y por eso el veredicto es condicional, "
            "un candidato con reservas. La nota es la de la mejor fecha, y un candidato no es una certificación."),
     ("s3", "Esto es relieve real de la NASA con foto de la cámara LROC. Las sombras y la posición del Sol y de la Tierra son las de este instante; "
-           "la foto es una mezcla de pasadas, no la luz de la fecha. Desde el observador, el Sol está tapado por el horizonte en este instante; "
+           "la foto es una mezcla de pasadas, no la luz de la fecha. Desde el observador vemos la Tierra sobre el horizonte, y el Sol, en este instante, tapado por el relieve; "
            "la ventana de catorce días lo tiene visible otras horas."),
     ("s4", "Ahora Shackleton, mismo punto, otra fecha. El doce de diciembre el enlace con las antenas de la NASA es del cien por cien. "
            "El seis de diciembre el Sol es igual de bueno, pero el enlace cae al sesenta y dos por ciento, con un hueco de ciento veintisiete horas "
@@ -161,11 +161,20 @@ def scene_viewer(pg: Page, base: str, log, start) -> None:
     if fr is None:
         log("  · AVISO: no se encontró el marco del visor 3D")
         return
-    for mode, secs in (("oblique", 3.5), ("observer", 5.5), ("wide", 4.0)):
+    for mode, secs in (("oblique", 3.5), ("observer", 8.0), ("wide", 4.0)):
         try:
             fr.locator(f"#m-{mode}").click(timeout=8000)
         except Exception as e:
             log(f"  · AVISO: no se pudo pulsar #m-{mode}: {type(e).__name__}")
+        if mode == "observer":                          # el Sol está bajo el horizonte: se mira a la Tierra (visible) y luego al Sol
+            try:
+                fr.locator("#az-earth").click(timeout=5000)
+                pg.wait_for_timeout(int(secs * 0.55 * 1000))
+                fr.locator("#az-sun").click(timeout=5000)
+                pg.wait_for_timeout(int(secs * 0.45 * 1000))
+            except Exception as e:
+                log(f"  · AVISO: no se pudo girar la mirada: {type(e).__name__}")
+            continue
         pg.wait_for_timeout(int(secs * 1000))
     try:
         fr.locator("#m-oblique").click(timeout=5000)
