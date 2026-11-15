@@ -196,7 +196,7 @@ Estado a 14/11/2026 en `main`, verificado ejecutando el motor y recontando las p
 - **Los TOP-1 no validan contra el mapa publicado** (±0,2–0,3): el campo medio cuadra (sesgo −0,01, RMS 0,09), el punto óptimo elegido no se puede dar por contrastado.
 - **`T_amb` de panel: 130 K con banda 40–250 K, aplicada el 15/11/2026** (propuesta de `docs/validation/datos-termico-psr.md`: factor de forma 0,84 **supuesto**, sin fuente primaria del IR del regolito iluminado; sigue «a verificar»). Mueve la potencia como mucho ≈ 0,4 puntos porcentuales; el score y el veredicto de los casos del guion no cambian.
 - **Falta o está a verificar:**
-  - **Licencia del código**: la decide el usuario; no hay fichero `LICENSE`.
+  - **Licencia del código**: Apache-2.0 (fichero `LICENSE`), la que NASA Space Apps aplica por defecto; los datos de terceros conservan su propia licencia y cita (`docs/fuentes-datos.md`).
   - **Repositorio remoto**: no hay; los commits son locales (`main` y `feat/lunaris-ui`).
   - **Vídeo de demo**: sin grabar; hay que reconfirmar las cifras de `docs/guion-demo.md` (y decidir rama).
   - **Red NSN de NASA (LEGS)**: no incluida; hay posiciones, pero ninguna elevación mínima verificada. **ESTRACK**: elevación supuesta de 6°; ESA publica una máscara por acimut (CEB-1 ≈ 5,5°, NNO-1 ≈ 8,4–8,5°) que **no está implementada**. Máscara de terreno y ocupación de las antenas del DSN, y transmisión de alta potencia (13,6°).
@@ -236,4 +236,4 @@ Referencias científicas (las marcadas «leída» se leyeron en fuente durante l
 
 Cómo citar: «Lunar Site Intelligence (LSI), 2026. Equipo LSI, NASA Space Apps Challenge 2026, *Lunar Landing Site Navigator*.»
 
-**Licencia del código: pendiente de decidir por el equipo** (no hay fichero `LICENSE` en el repositorio).
+**Licencia del código: Apache-2.0** (fichero `LICENSE`). Elegida por indicación del dueño: la que fije el hackatón. Los términos de Space Apps de 2026 no pudieron leerse de la fuente primaria (fallo de certificado TLS del sitio); revisa que siguen aceptando una licencia OSI. Los datos NASA/USGS/SDEM mantienen sus licencias y citas.
