@@ -32,7 +32,7 @@ Resultado: `demo_out/lsi-demo.mp4` (≈ 2 min, 1600×900, voz Helena en español
 | s2 | «Capacidad del sitio», Planificador, coordenadas −85,9841 / 2,6123, inicio 2026-12-01, 366 días | Nota 98, CONDICIONAL, **«5 de 353»** fechas de inicio que sirven |
 | s3 | Explorador 3D: vista oblicua → observador → orbital amplia | El Sol «tapado… en este instante» |
 | s4 | Shackleton TOP-1 (−89,5626 / 215,4724): inicio 2026-12-12 y luego 2026-12-06 | 12-dic APTO con enlace 100 %; 06-dic CONDICIONAL con 62 % y 127 h |
-| s5 | «Acerca de y límites» | Límites declarados |
+| s5 | «Mapa del polo sur»: zoom con la barra del mapa, del polo entero a Shackleton (cierre) | La app muestra el mapa; se narran los límites declarados |
 
 ## Reglas
 

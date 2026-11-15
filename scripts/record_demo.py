@@ -191,9 +191,17 @@ def scene_contrast(pg: Page, base: str, log, scene_s: float, start) -> None:
 
 
 def scene_limits(pg: Page, base: str, log, start) -> None:
-    goto(pg, base, "about", "h1")
+    """Cierre sobre el mapa navegable del polo sur (más contenido visual que una página de texto): zoom suave con la rueda."""
+    goto(pg, base, "polar_map", 'h1:has-text("Mapa del polo sur")')
+    pg.wait_for_timeout(5000)
+    pg.evaluate("document.querySelector('[data-testid=\"stMain\"]').scrollBy({top: 330, behavior: 'smooth'})")
+    pg.wait_for_timeout(1200)
     start()
-    pg.mouse.wheel(0, 380)
+    sl = pg.get_by_role("slider").first                 # barra «Zoom» del mapa: acercamiento gradual
+    sl.focus()
+    for _ in range(7):
+        sl.press("ArrowRight")
+        pg.wait_for_timeout(2300)
 
 
 def run_flow(pg: Page, base: str, durations: dict, log, t_marks: dict | None) -> None:
