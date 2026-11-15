@@ -187,7 +187,7 @@ Este factor es un promedio de la ventana con el Sol bajo; el de la pantalla «Po
 | Se rompe la app | Enseña las capturas de [`docs/capturas/`](capturas/) (31 JPG del QA visual del 14/11/2026 en la raíz, más `polo/`, `relieve/`, `mapas/`, `correcciones/` e `identidad/`; datos reales). Las 31 de la raíz **no incluyen** «Capacidad del sitio»; sí la de `correcciones/01-capacidad-sitio-80m.jpg` y `polo/05-capacidad-sitio-80m.jpg`, ambas en modo de 80 m. Las de `identidad/` muestran el aspecto LUNARIS de la rama `feat/lunaris-ui`. Como último recurso, `python -m pytest -q tests/test_pipeline.py`. |
 | Streamlit no arranca | `python -m pip install -r requirements.txt` y `python -m streamlit run app.py` desde la carpeta del proyecto. |
 
-El vídeo grabado sigue **pendiente**. Antes de grabarlo hay que decidir en qué rama (`main` o `feat/lunaris-ui`) y reconfirmar todas las cifras.
+El vídeo ya está grabado con la rama `feat/lunaris-ui` (guion corto en `guion-demo-lunaris.md`, workflow en `workflow-grabacion-video.md`; el MP4 no se versiona ni se ha publicado). Si cambian el motor o los datos, hay que reconfirmar las cifras y regrabar.
 
 ## Qué NO decir en la demo
 
