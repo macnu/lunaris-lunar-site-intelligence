@@ -18,6 +18,11 @@ What makes it different from existing viewers: the same site with the same sunli
 the coarse far-field mode is stated on screen. Top-ranked spots are labelled **candidates**, not certified sites:
 they do not match the published illumination map to within ±0.2–0.3.
 
+## Demo
+
+`demo_out/lsi-demo-en-30s.mp4` (28.6 s, English voice-over; the on-screen interface is in Spanish). Not yet uploaded:
+the owner must host it (YouTube or Google Drive) with a public link and paste it in the Project tab.
+
 ## How to try it
 
 Python 3.11. `pip install -r requirements.txt`, download data with the scripts in `scripts/`, then

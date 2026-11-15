@@ -41,6 +41,17 @@ SCENES = [
            "publicado, y el relieve de cinco metros tiene resolución efectiva de unos treinta. Por eso decimos candidato, no recomendado. "
            "Lunar Site Intelligence: entender cuándo un lugar ve el Sol, cuándo ve la Tierra y cuánta confianza merece cada resultado."),
 ]
+# Versión en inglés de ≈ 30 s (el portal de Space Apps exige inglés y vídeo ≤ 30 s: verificar en la guía 2026). La interfaz sigue en español.
+SCENES_EN_SHORT = [
+    ("s2", "Lunar Site Intelligence: can a lunar spot see the Sun, see the Earth, and talk to it? "
+           "Malapert scores ninety-eight, but only {fechas} start dates work."),
+    ("s3", "Real NASA terrain. From here, Earth is visible; the Sun is hidden right now."),
+    ("s4", "Same spot, other date. December twelve: link one hundred percent. "
+           "December six: sixty-two percent, a one hundred twenty-seven hour blackout."),
+]
+VOICE = "Microsoft Helena Desktop"
+RATE = 0
+SHORT = False
 TAIL_S = 0.8
 MAX_GAP_S = 2.5          # tope de las pausas de carga entre escenas en el vídeo final
 MEASURED: dict = {}      # cifras leídas de la pantalla durante el calentamiento
@@ -56,7 +67,7 @@ def tts(text: str, wav: Path) -> float:
     txt = wav.with_suffix(".txt")
     txt.write_text(text, encoding="utf-8")
     ps = ("Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
-          "$s.SelectVoice('Microsoft Helena Desktop'); $s.Rate = 0; "
+          f"$s.SelectVoice('{VOICE}'); $s.Rate = {RATE}; "
           f"$s.SetOutputToWaveFile('{wav}'); $s.Speak([IO.File]::ReadAllText('{txt}', [Text.Encoding]::UTF8)); $s.Dispose()")
     subprocess.run(["powershell", "-NoProfile", "-Command", ps], check=True)
     with wave.open(str(wav)) as w:
@@ -161,7 +172,7 @@ def scene_viewer(pg: Page, base: str, log, start) -> None:
     if fr is None:
         log("  · AVISO: no se encontró el marco del visor 3D")
         return
-    for mode, secs in (("oblique", 3.5), ("observer", 8.0), ("wide", 4.0)):
+    for mode, secs in ((("oblique", 1.5), ("observer", 5.5)) if SHORT else (("oblique", 3.5), ("observer", 8.0), ("wide", 4.0))):
         try:
             fr.locator(f"#m-{mode}").click(timeout=8000)
         except Exception as e:
@@ -192,7 +203,7 @@ def scene_contrast(pg: Page, base: str, log, scene_s: float, start) -> None:
     t12 = pg.locator("main, [data-testid='stMain']").first.inner_text()
     log(f"  · 12-dic: 'APTO' {('APTO' in t12)}; '100' enlace {('100,0 %' in t12)}")
     start()
-    pg.wait_for_timeout(int(scene_s * 0.30 * 1000))
+    pg.wait_for_timeout(int(scene_s * (0.25 if SHORT else 0.30) * 1000))
     set_side(pg, "Inicio", "2026-12-06 00:00")
     wait_calc(pg)
     t06 = pg.locator("main, [data-testid='stMain']").first.inner_text()
@@ -243,7 +254,12 @@ def main() -> int:
     ap.add_argument("--url", default="http://localhost:8598")
     ap.add_argument("--out", default="demo_out")
     ap.add_argument("--no-record", action="store_true", help="solo calienta y comprueba (no graba)")
+    ap.add_argument("--en-short", action="store_true", help="versión en inglés de ≈ 30 s (voz David) → lsi-demo-en-30s.mp4")
     a = ap.parse_args()
+    global VOICE, SHORT, RATE, TAIL_S, MAX_GAP_S
+    if a.en_short:
+        VOICE, SHORT, RATE, TAIL_S, MAX_GAP_S = "Microsoft David Desktop", True, 2, 0.3, 1.0
+        SCENES[:] = SCENES_EN_SHORT
     out = Path(a.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
     log = lambda m: print(m, flush=True)
@@ -260,7 +276,7 @@ def main() -> int:
             log("ERROR: no se pudo leer «Fechas de inicio que sirven» de la pantalla; no se graba una narración con cifras sin ver.")
             br.close()
             return 2
-        texts = {k: tx.replace("{fechas}", MEASURED["fechas"].replace(" de ", " de ")) for k, tx in SCENES}
+        texts = {k: tx.replace("{fechas}", MEASURED["fechas"].replace(" de ", " of " if a.en_short else " de ")) for k, tx in SCENES}
         for k, _ in SCENES:
             wavs[k] = out / f"{k}.wav"
             durations[k] = tts(texts[k], wavs[k])
@@ -280,7 +296,7 @@ def main() -> int:
         br.close()
 
     ff = ffmpeg_exe()
-    trim = max(marks["s1"] - t_ctx - 0.4, 0.0)       # quita la carga inicial (aviso de página no encontrada de Streamlit)
+    trim = max(marks[SCENES[0][0]] - t_ctx - 0.4, 0.0)       # quita la carga inicial (aviso de página no encontrada de Streamlit)
     # Línea de tiempo del vídeo bruto (s): cada narración [ini, fin]; los tramos sin narración se aceleran (carga de Streamlit) hasta MAX_GAP_S.
     starts = {k: marks[k] - t_ctx + 0.1 for k, _ in SCENES}
     ends = {k: starts[k] + durations[k] + TAIL_S for k, _ in SCENES}
@@ -310,7 +326,7 @@ def main() -> int:
         af.append(f"[{i + 1}:a]adelay={off_ms}|{off_ms}[a{i}]")
         labels.append(f"[a{i}]")
     af.append("".join(labels) + f"amix=inputs={len(SCENES)}:normalize=0[aout]")
-    mp4 = out / "lsi-demo.mp4"
+    mp4 = out / ("lsi-demo-en-30s.mp4" if a.en_short else "lsi-demo.mp4")
     subprocess.run([ff, "-y", "-i", str(vid), *inputs, "-filter_complex", ";".join(vf + af), "-map", "[vout]", "-map", "[aout]",
                     "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", "-r", "30", "-c:a", "aac", "-b:a", "160k", "-shortest", str(mp4)],
                    check=True, capture_output=True)
@@ -323,7 +339,7 @@ def main() -> int:
         text = texts[k]
         s0 = starts[k]
         srt.append(f"{i}\n{ts(s0)} --> {ts(s0 + durations[k])}\n{text}\n")
-    (out / "narracion.srt").write_text("\n".join(srt), encoding="utf-8")
+    (out / ("narration-en.srt" if a.en_short else "narracion.srt")).write_text("\n".join(srt), encoding="utf-8")
     log(f"LISTO: {mp4}")
     return 0
 

@@ -24,6 +24,11 @@ Resultado: `demo_out/lsi-demo.mp4` (≈ 2 min, 1600×900, voz Helena en español
    `ffmpeg -i demo_out/lsi-demo.mp4 -vf "fps=1/6,scale=640:-1,tile=4x5" -frames:v 1 demo_out/sheet.jpg`
 5. **Para.** el servidor de Streamlit (mira el PID del puerto con `Get-NetTCPConnection -LocalPort 8598`).
 
+## Versión en inglés de 30 s (entrega a NASA Space Apps)
+
+El portal pide inglés y una demo de vídeo ≤ 30 s o ≤ 7 diapositivas (límite de la guía anterior: confirmarlo en la guía 2026).
+`python scripts/record_demo.py --url http://localhost:8598 --out demo_out --en-short` → `demo_out/lsi-demo-en-30s.mp4` (28,6 s, voz «Microsoft David» en-US) y `narration-en.srt`. Usa 3 escenas (Malapert «5 of 353», visor 3D, Shackleton 12-dic frente a 6-dic). La interfaz que se ve sigue en español.
+
 ## Escenas (lo que hace y lo que se narra)
 
 | Escena | Pantalla | Se comprueba en pantalla |
