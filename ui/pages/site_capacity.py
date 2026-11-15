@@ -307,6 +307,9 @@ with hero_col:
         if sc.confidence is not None:
             lv = sc.confidence.level.value
             verdict_chips.append(C.chip(f"Confianza {lv}", {"alta": "ok", "media": "cond"}.get(lv, "bad"), "◈"))
+    if sc is not None and sc.verdict != "NO APTO":
+        # El jurado (15/11) leyó «APTO 98» como más firme de lo que la validación respalda: se rotula a la vez.
+        verdict_chips.append(C.chip("Candidato: no validado contra el mapa publicado (±0,2-0,3)", "warn", "⚠"))
     verdict_chips.append({"dem": C.chip("Relieve real (DEM)", "info", "⛰"), "far": C.chip(C.FAR_LABEL, "warn", "⛰"),
                           "sphere": C.chip("Esfera lisa: sin terreno", "warn", "◯")}[C.terrain_kind(o.mode)])
     if has_window:
