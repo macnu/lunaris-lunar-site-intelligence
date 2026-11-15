@@ -173,7 +173,7 @@ El aviso dice «sin polvo, sombra propia ni albedo», pero existe `dust_loss` (s
 
 ## Anexo A: pruebas ejecutadas (scripts fuera del repo)
 
-Scripts: `C:\Users\Arquitecto\AppData\Local\Temp\claude\06df16980bb5b783\dd9d8ef8-907d-4b50-af02-0fb5d90307fa\scratchpad\` (`probe1.py`…`probe8.py`, `imports.py`).
+Scripts: `(carpeta temporal de la sesión de revisión)` (`probe1.py`…`probe8.py`, `imports.py`).
 
 - `probe1`: ET−UTC por año, `et2utc` en medianoche, error de `DAY_ORIGIN_ET` (resultados en B1 y B2).
 - `probe2`: entradas límite de `run_analysis` (B3). Casos «OK»: lat +95 con site_id (snap), lat −90, lon −30 (esfera lisa), 1900-01-02, 2050-12-30.
