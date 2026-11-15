@@ -19,3 +19,6 @@ data/validation_raw/
 
 # Expediente del juicio del jurado (local)
 .jurado/
+
+# vídeo de demo generado
+demo_out/

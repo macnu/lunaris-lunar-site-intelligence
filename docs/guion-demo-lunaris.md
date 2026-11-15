@@ -2,7 +2,7 @@
 
 Este es el guion para grabar el vídeo con la rama **`feat/lunaris-ui`** (marca LUNARIS, navegación superior y visor 3D con foto, Sol y Tierra reales). Tiene **tres escenas y cuatro cifras**. El guion largo, [`guion-demo.md`](guion-demo.md), sigue siendo la referencia de datos, plan B y qué no decir; las cifras de aquí salen de él (reproducidas con `lsi.pipeline` el 14/11/2026).
 
-**Reconfirma las cuatro cifras en la app antes de grabar.** Si difieren, usa las de la app. El vídeo sigue **pendiente**: grabarlo y publicarlo es decisión del dueño.
+**Reconfirma las cuatro cifras en la app antes de grabar.** Si difieren, usa las de la app. El vídeo se graba con `scripts/record_demo.py` (ver [`workflow-grabacion-video.md`](workflow-grabacion-video.md)); el texto narrado exacto está en ese script, que solo narra lo que lee en pantalla. Publicarlo es decisión del dueño.
 
 **Ajustes previos:** `python -m streamlit run app.py`, modo **Planificador**, red **DSN**, sentido **recepción**, margen **0°**, perfil lander solar sin RHU, misión de 14 d, panel por defecto «Array vertical en mástil». Teclea las coordenadas exactas de `guion-demo.md` («Coordenadas exactas»).
 
@@ -11,7 +11,7 @@ Este es el guion para grabar el vídeo con la rama **`feat/lunaris-ui`** (marca 
 | Cifra | Valor | Dónde se ve |
 |---|---|---|
 | Malapert, inicio 2026-12-16 | APTO, nota 98,4 | «Capacidad del sitio» |
-| Fechas de inicio que sirven en Malapert | 5 de 366 | tarjeta principal («Fechas de inicio que sirven»). **Solo sale con un periodo mayor que la misión**: pon inicio 2026-12-01 y 379 días (con periodo = misión hay una sola fecha y la fila no aparece) |
+| Fechas de inicio que sirven en Malapert | 5 de 353 (366 días de periodo) | tarjeta principal («Fechas de inicio que sirven»). **Solo sale con un periodo mayor que la misión**: pon inicio 2026-12-01 y 366 días (el máximo del campo): sale «5 de 353» y el veredicto CONDICIONAL; con periodo = misión hay una sola fecha y la fila no aparece |
 | Shackleton TOP-1, inicio 2026-12-12 | enlace 100 %, nota 97,4, APTO | «Capacidad del sitio» |
 | Shackleton TOP-1, inicio 2026-12-06 | enlace 62 %, hueco de 127 h, CONDICIONAL (73,9) | «Capacidad del sitio» |
 
@@ -19,7 +19,7 @@ Este es el guion para grabar el vídeo con la rama **`feat/lunaris-ui`** (marca 
 
 | Tiempo | Pantalla | Qué dices |
 |---|---|---|
-| **0:00–0:50** | **Buscador** → «Malapert» → «Evaluar este lugar». Llegas a **Capacidad del sitio** con la tarjeta principal. | «Buscamos entre más de 9 000 lugares de la Luna. LSI responde a una pregunta: ¿este punto ve el Sol, ve la Tierra y podría hablar con ella? Malapert, 16 de diciembre: APTO, 98,4. Pero fíjate en la línea de al lado: solo 5 de 366 fechas de inicio sirven. La nota es la de la mejor fecha, y un candidato no es una certificación.» |
+| **0:00–0:50** | **Buscador** → «Malapert» → «Evaluar este lugar». Llegas a **Capacidad del sitio** con la tarjeta principal. | «Buscamos entre más de 9 000 lugares de la Luna. LSI responde a una pregunta: ¿este punto ve el Sol, ve la Tierra y podría hablar con ella? Malapert, buscando la mejor fecha en un año: nota 98, pero solo 5 de 353 fechas de inicio sirven y el veredicto es CONDICIONAL. La nota es la de la mejor fecha, y un candidato no es una certificación.» |
 | **0:50–1:50** | **Visor 3D** de la misma página. Vista oblicua con foto y sombras; luego vista del observador con el Sol y la Tierra. | «Esto es relieve real de la NASA con foto de la cámara LROC. Las sombras y el Sol son los de este instante; la foto es una mezcla de pasadas, así que no es la luz de la fecha. Aquí el Sol está tapado por el horizonte *en este instante*: la ventana de 14 días lo tiene visible otras horas.» |
 | **1:50–2:40** | **Capacidad del sitio** con las coordenadas del TOP-1 de Shackleton. Inicio **12-dic**, luego **6-dic**. | «Mismo punto, otra fecha. El 12 de diciembre el enlace con las antenas de la NASA es del 100 %: APTO, 97,4. El 6 de diciembre el Sol es igual de bueno, pero el enlace cae al 62 % y hay 127 horas sin comunicaciones: CONDICIONAL. Ver la Tierra no es poder hablar con ella.» |
 | **2:40–3:00** | **Acerca de y límites** | «Esto es geometría y cobertura de estación, no un presupuesto de radio. Nuestros mejores candidatos no coinciden con el mapa de iluminación publicado (±0,2–0,3) y el relieve de 5 m tiene resolución efectiva de unos 30 m. Por eso decimos candidato, no recomendado.» + frase de cierre de `guion-demo.md`. |
